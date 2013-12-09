@@ -19,6 +19,7 @@ has debug => (
 );
 
 
+
 1;
 
 __END__
@@ -27,7 +28,7 @@ __END__
 
 =head1 NAME
 
-Role::EightLetters::Template
+Role::EightLetters
 
 An abstract class for EightLetters::* classes.
 
