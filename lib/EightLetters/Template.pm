@@ -105,9 +105,7 @@ element.
 
 Optional: A Boolean value.  Use a true value to set debugging mode for your
 class. Debugging mode is left as an exercise for the class's developer, but is
-useful for conditionally printing progress reports, since the process of
-isolating the eight letters that will spell the most words could potentially be
-quite long running.
+useful for conditionally printing progress reports.
 
 
 =head1 ADDITIONAL REQUIRED METHODS
