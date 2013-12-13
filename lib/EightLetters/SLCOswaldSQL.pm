@@ -8,7 +8,6 @@ package EightLetters::DavidoSQLite;
 #
 
 
-
 ###############################################################################
 # Modules used                                                                #
 ###############################################################################
@@ -16,9 +15,8 @@ package EightLetters::DavidoSQLite;
 use strict;
 use warnings;
 use Moo;
+use MooX::Types::MooseLike::Base qw( Int Str HashRef ArrayRef InstanceOf );
 use DBI;
-use Scalar::Util qw( reftype );
-
 
 
 ###############################################################################
@@ -43,51 +41,21 @@ use constant DB_COUNT              => 1;
 # Attributes                                                                  #
 ###############################################################################
 
+
 # Primary accessors:
 
-has count           => ( is => 'lazy' );
-has letters         => ( is => 'lazy' );
+has count           => ( is => 'lazy', isa => Int );
+has letters         => ( is => 'lazy', isa => Str );
+
 
 # Internal accessors:
 
-has _count_internal => ( is => 'rw' );
-
-has _bags_aref      => (
-  is  => 'rw',
-  isa => sub {
-    die '_bags_aref must be an aref.'
-      unless reftype shift eq 'ARRAY';
-  }
-);
-
-has _shorter_aref   => (
-  is  => 'rw',
-  isa => sub {
-    die '_shorter_aref must be an aref.'
-      unless reftype shift eq 'ARRAY';
-  }
-);
-
-has _alpha_freq_href => (
-  is  => 'rw',
-  isa => sub {
-    die '_alpha_freq_href must be an href.'
-      unless reftype shift eq 'HASH';
-  }
-);
-
-has _ordered_letters_aref => (
-  is  => 'rw',
-  isa => sub {
-    die '_ordered_letters_aref must be an aref.'
-      unless reftype shift eq 'ARRAY';
-  }
-);
-
-has db => (
-  is  => 'lazy',
-  isa => sub { die 'Not a database handle' unless ref shift eq 'DBI::db'; }
-);
+has _count_internal       => ( is  => 'rw',   isa => Int                     );
+has _bags_aref            => ( is  => 'rw',   isa => ArrayRef[Str]           );
+has _shorter_aref         => ( is  => 'rw',   isa => ArrayRef[Str]           );
+has _alpha_freq_href      => ( is  => 'rw',   isa => HashRef[Str]            );
+has _ordered_letters_aref => ( is  => 'rw',   isa => ArrayRef[Str]           );
+has _db                   => ( is  => 'lazy', isa => InstanceOf[ 'DBI::db' ] );
 
 
 ###############################################################################
@@ -102,8 +70,9 @@ sub _count_builder {
 
 sub _letters_builder {
   my $self = shift;
+  my $count = 1; # Incomplete.
 
-  # $self->_count_internal($count);
+  $self->_count_internal($count);
 }
 
 sub _db_builder {
