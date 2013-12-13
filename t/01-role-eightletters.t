@@ -30,7 +30,7 @@ use Test::More;
     my $bad = Test->new( dict => {}, debug => 0 );
   };
 
-  like $@, qr/^isa check for "dict" failed: <<HASH\(/, 'Constructor ISA check.';
+  like $@, qr/^isa check for "dict" failed: HASH\(/, 'Constructor ISA check.';
 }
 
 {

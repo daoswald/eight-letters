@@ -3,39 +3,21 @@ package Dictionary;
 use feature qw( unicode_strings );
 use FindBin;
 use Moo;
-
+use MooX::Types::MooseLike::Base qw( ArrayRef Str );
 
 # Sane defaults.
 use constant DICTIONARY     => "$FindBin::Bin/../lib/dict/2of12inf.txt";
-use constant LENGTH_LIMIT   => 45;
-use constant LENGTH_DEFAULT => 8;
-has words => ( is => 'lazy' );
 
-has path  => (
-  is      => 'ro',
-  default => DICTIONARY,
-);
-
-
-has max_length => (
-  is      => 'ro',
-  default => LENGTH_DEFAULT,
-  isa     => sub {
-    my $len = shift;
-    die "Error: <$len> must be a positive integer in range of 1-" . LENGTH_LIMIT
-      if $len !~ m/^[0-9]+$/ || $len < 1 || $len > LENGTH_LIMIT;
-    return $len;
-  }
-);
+has words => (    is => 'lazy',    isa => ArrayRef[Str]    );
+has path  => (    is => 'ro',      default => DICTIONARY    );
 
 
 # Run through the dictionary file, and keep only words of 8 characters or less,
 # and drop any non-word characters at the end.
 sub _build_words {
   my $self = shift;
-  my $max = $self->max_length;
   open my $dict_fh, '<:encoding(utf8)', $self->path or die $!;
-  return [    map { ( m/^([a-z]{1,$max})\b/ && $1 ) || () } <$dict_fh>    ];
+  return [    map { ( m/^([a-z]+)\b/ && $1 ) || () } <$dict_fh>    ];
 }
 
 
@@ -56,11 +38,15 @@ Provides a dictionary list of words.
   use Dictionary;
   my $words_aref = Dictionary->new->words;
 
+  # or
+  my $words_aref = Dictionary->new( path => 'path/to/dict.txt' )->words;
+
 =head1 DESCRIPTION
 
-Provides an English dictionary of words of length no greater than eight
-characters.  The dictionary file should have one word per line, and no
-hyphenation or punctuation.  Trailing punctuation will be truncated.
+Provides an English dictionary of words.  The dictionary file should have one
+word per line, and no hyphenation or punctuation.  Trailing characters that
+don't match C<[A-Za-z]> will be truncated.
+
 
 =head1 ATTRIBUTES
 
@@ -71,16 +57,6 @@ hyphenation or punctuation.  Trailing punctuation will be truncated.
 
 B<Optional>. Provides the path where the dictionary may be found.  If none is
 specified, the default dictionary bundled with the module will be used.
-
-
-=head2 max_length
-
-  my $dict = Dictionary->new( path => 'path', max_length => 8 );
-
-B<Optional>. The dictionary generated will have words of C<max_length> letters
-or less. All others will be dropped.  Default is 8.  Max is 45, which ought to
-suffice. ;)
-
 
 =head1 METHODS
 
@@ -97,8 +73,7 @@ be returned.
 
 =head2 words
 
-Returns a reference to an array containing all the words from the dictionary
-that meet the C<max_length> criteria (by default, all words of 1-8 characters).
+Returns a reference to an array containing all the words from the dictionary.
 
 
 =head1 SUPPORT

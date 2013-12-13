@@ -1,24 +1,11 @@
 package Role::EightLetters;
 
-use Scalar::Util qw( reftype );
 use Moo::Role;
-
+use MooX::Types::MooseLike::Base qw( ArrayRef Str Bool );
 requires qw( new count letters );
 
-has dict => (
-  is  => 'ro',
-  isa => sub {
-    die "<<$_[0]>> is not an array ref"
-      unless reftype $_[0] eq 'ARRAY';
-  },
-  required => 1,
-);
-
-has debug => (
-  is  => 'ro'
-);
-
-
+has dict  => (    is  => 'ro',    isa => ArrayRef[Str],    required => 1    );
+has debug => (    is  => 'ro',    isa => Bool    );
 
 1;
 

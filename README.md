@@ -40,3 +40,10 @@ benchmarked, and the results will be displayed.
 
 The script skips EightLetters::Template, of course, since that
 is mostly just a dummy framework.
+
+
+Required distributions:
+Moo
+MooX::Types::MooseLike
+DBI
+
