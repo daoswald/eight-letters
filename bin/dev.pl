@@ -2,9 +2,11 @@
 
 use FindBin;
 use lib "$FindBin::Bin/../lib";
-use EightLetters::Template;
+use EightLetters::Oswald;
 use Dictionary;
 
-my $el = EightLetters::Template->new( dict => Dictionary->new->words );
+my $el = EightLetters::Oswald->new( dict => Dictionary->new->words );
+my $letters = $el->letters;
+my $count   = $el->count;
 
-print scalar @{$el->dict}, "\n";
+print "$letters spells $count words.\n";

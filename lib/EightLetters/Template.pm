@@ -21,13 +21,19 @@ use Moo;
 
 # my $puzzle = EightLetters->new( dict => [ qw( aref of words ) ] );
 
-# my $count = $puzzle->count;
-sub count { ... }
+# Remember! The dictionary has words greater than 8 characters in length, and
+# some words may have non-ascii characters trailing, which may safely
+# be dropped.
+
+
+# You must implement the following:
 
 # my $letters = $puzzle->letters;
 sub letters { ... }
 
 
+# my $count = $puzzle->count;
+sub count { ... }
 
 
 

@@ -1,5 +1,8 @@
 #!/usr/bin/env perl
 
+# Example of a version that uses SQLite. This hasn't (yet) been committed to a
+# proper module.
+
 use strict;
 use warnings;
 use DBI;
