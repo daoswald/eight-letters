@@ -43,6 +43,8 @@ For details and ideas on impmementation, see the POD in:
                              use as a starting point to build upon,
                              or even subclass it if you wish.
 
+See also the slides in ./eightletters_slides.odf.
+
 Here's what will happen.  Add your module's name to the list contained in
 bin/bencheight.pl, and your module will be benchmarked against the others.
 
