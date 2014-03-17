@@ -2,14 +2,13 @@
 
 use FindBin;
 use lib "$FindBin::Bin/../lib";
-use EightLetters::Find;
-use Dictionary;
+use EightLetters;
 
+use constant TEST_DICT => "$FindBin::Bin/../lib/dict/test_dict.txt";
 
-my $el = EightLetters::Find->new( dict => Dictionary->new(path=>"$FindBin::Bin/../lib/dict/test_dict.txt")->words );
-#my $el = EightLetters::Find->new( dict => Dictionary->new->words );
-my $letters = $el->letters;
-my $count   = $el->count;
+#my $el = EightLetters->new( dict_path => TEST_DICT );
+my $el = EightLetters->new;
+
+my( $letters, $count ) = ( $el->letters, $el->count );
 
 print "$letters spells $count words.\n";
-
