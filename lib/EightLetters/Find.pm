@@ -5,7 +5,7 @@ package EightLetters::Find;
 use strict;
 use warnings;
 use Moo;
-use namespace::clean;
+#use namespace::clean;
 
 # Constants:
 
@@ -22,7 +22,7 @@ has debug   => ( is  => 'ro'  );
 has count   => ( is => 'lazy' );
 has letters => ( is => 'lazy' );
 has buckets => ( is => 'rw', default => sub { {} } );
-has words   => ( is => 'rw', default => sub { [] } );
+has words   => ( is => 'rw', default => sub { {} } );
 
 # Internal accessors:
 
@@ -39,32 +39,34 @@ sub _build_signature {
     vec($bv, ( ( 32 * $histogram->[$card_letter] ) + $card_letter ), 1 ) = 1
       while $histogram->[$card_letter]--;
   }
-  return [ map { vec( $bv, $_, 32 ) } 0 .. 7 ];
+  return [ unpack( 'V8', $bv ) ];
 }
 
 sub _make_histogram {
   my @hist = (0)x26;
-  # 0 .. 25 will each contain a count of how many times a given letter appears.
   $hist[ ord() - ORD_A ]++ foreach split //, $_[1];
   return \@hist;
 }
 
 sub _organize_words {
   my $self = shift;
-  my( %buckets, @rest );
   foreach my $word ( @{$self->dict} ) {
     next unless $word =~ m/([a-z]{1,8})\b/;
     my $wanted_word = $1;
+    my $letters = join '', sort split //, $wanted_word;
     if ( 8 == length $wanted_word ) {
-      my $letters = join '', sort split //, $wanted_word;
-      ${$self->buckets}{$letters}
+      my $b = $self->buckets;
+      $b->{$letters}
         = [ $wanted_word, $self->_build_signature($wanted_word), 0 ]
-        unless exists ${$self->buckets}{$letters};
-      ${$self->buckets}{$letters}->[COUNT]++;
+        unless exists $b->{$letters};
+      $b->{$letters}->[COUNT]++;
     }
     else {
-      push @{$self->words},
-        [ $wanted_word, $self->_build_signature($wanted_word), 0 ];
+      my $w = $self->words;
+      $w->{$letters}
+        = [ $wanted_word, $self->_build_signature($wanted_word), 0 ]
+          unless exists $w->{$letters};
+      $w->{$letters}->[COUNT]++;
     }
   }
 }
@@ -74,7 +76,7 @@ sub _build_letters {
   
   # Prepare the buckets.
   $self->_organize_words;
-  print "Words organized.  There are ", scalar @{$self->words}, " words remaining.\n";
+  print "Words organized.  There are ", scalar keys %{$self->words}, " words remaining.\n";
 
   # Increment the counts.
   print "Tallying buckets.\n";
@@ -88,17 +90,20 @@ sub _build_letters {
 }
 
 sub _increment_counts {
-  foreach my $w ( @{$_[0]->words} ) {
-    foreach my $b ( values %{$_[0]->buckets} ) {
-      $b->[COUNT]++
-        if   ( ( $w->[SIGT][0] & $b->[SIGT][0] ) == $w->[SIGT][0] )
-          && ( ( $w->[SIGT][1] & $b->[SIGT][1] ) == $w->[SIGT][1] )
-          && ( ( $w->[SIGT][2] & $b->[SIGT][2] ) == $w->[SIGT][2] )
-          && ( ( $w->[SIGT][3] & $b->[SIGT][3] ) == $w->[SIGT][3] )
-          && ( ( $w->[SIGT][4] & $b->[SIGT][4] ) == $w->[SIGT][4] )
-          && ( ( $w->[SIGT][5] & $b->[SIGT][5] ) == $w->[SIGT][5] )
-          && ( ( $w->[SIGT][6] & $b->[SIGT][6] ) == $w->[SIGT][6] )
-          && ( ( $w->[SIGT][7] & $b->[SIGT][7] ) == $w->[SIGT][7] );
+  my $buckets = [ values %{$_[0]->buckets} ];
+  foreach my $w ( values %{$_[0]->words} ) {
+    my $wd = $w->[SIGT];
+    foreach my $b ( @{$buckets} ) {
+      my $bd = $b->[SIGT];
+      $b->[COUNT] += $w->[COUNT]
+        if (  !( $wd->[0] & ~ $bd->[0] )
+           && !( $wd->[1] & ~ $bd->[1] )
+           && !( $wd->[2] & ~ $bd->[2] )
+           && !( $wd->[3] & ~ $bd->[3] )
+           && !( $wd->[4] & ~ $bd->[4] )
+           && !( $wd->[5] & ~ $bd->[5] )
+           && !( $wd->[6] & ~ $bd->[6] )
+           && !( $wd->[7] & ~ $bd->[7] )  );
     }
   }
 }  
