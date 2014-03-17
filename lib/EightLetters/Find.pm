@@ -5,7 +5,7 @@ package EightLetters::Find;
 use strict;
 use warnings;
 use Moo;
-#use namespace::clean;
+use integer;
 
 # Constants:
 
@@ -36,10 +36,10 @@ sub _build_count {
 sub _build_signature {
   my ( $histogram, $bv ) = ( $_[0]->_make_histogram($_[1]), ZEROBV );
   foreach my $card_letter ( 0 .. $#{$histogram} ) {
-    vec($bv, ( ( 32 * $histogram->[$card_letter] ) + $card_letter ), 1 ) = 1
+    vec($bv, ( ( 26 * $histogram->[$card_letter] ) + $card_letter ), 1 ) = 1
       while $histogram->[$card_letter]--;
   }
-  return [ unpack( 'V8', $bv ) ];
+  return [ unpack( 'Q4', $bv ) ];
 }
 
 sub _make_histogram {
@@ -96,14 +96,10 @@ sub _increment_counts {
     foreach my $b ( @{$buckets} ) {
       my $bd = $b->[SIGT];
       $b->[COUNT] += $w->[COUNT]
-        if (  !( $wd->[0] & ~ $bd->[0] )
-           && !( $wd->[1] & ~ $bd->[1] )
-           && !( $wd->[2] & ~ $bd->[2] )
-           && !( $wd->[3] & ~ $bd->[3] )
-           && !( $wd->[4] & ~ $bd->[4] )
-           && !( $wd->[5] & ~ $bd->[5] )
-           && !( $wd->[6] & ~ $bd->[6] )
-           && !( $wd->[7] & ~ $bd->[7] )  );
+        if (  !( $wd->[0] & ~$bd->[0] )
+           && !( $wd->[1] & ~$bd->[1] )
+           && !( $wd->[2] & ~$bd->[2] )
+           && !( $wd->[3] & ~$bd->[3] ) );
     }
   }
 }  
