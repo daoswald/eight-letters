@@ -53,6 +53,9 @@ sub _organize_words {
         unless exists $ref->{$letters};
     $ref->{$letters}[COUNT]++;
   }
+  foreach my $bucket ( values %$b ) {
+    $_ = ~$_ for @{$bucket->[SIGT]};
+  }
 }
 
 sub _build_letters {
@@ -77,10 +80,10 @@ sub _increment_counts {
     foreach my $b ( @{$buckets} ) {
       my $bs = $b->[SIGT];
       $b->[COUNT] += $w->[COUNT]
-        if (  !( $ws->[0] & ~$bs->[0] )
-           && !( $ws->[1] & ~$bs->[1] )
-           && !( $ws->[2] & ~$bs->[2] )
-           && !( $ws->[3] & ~$bs->[3] ) );
+        if (  !( $ws->[0] & $bs->[0] )
+           && !( $ws->[1] & $bs->[1] )
+           && !( $ws->[2] & $bs->[2] )
+           && !( $ws->[3] & $bs->[3] ) );
     }
   }
 }  
