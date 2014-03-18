@@ -15,18 +15,18 @@ that resolves the answers to these two questions.
 The module will reside in the EightLetters heirarcy, and should
 implement the following class and object methods:
 
-* new      -- A constructor.
-* letters  -- Returns the optimal set of letters as a string.
-* count    -- Returns how many words from 'dict' those letters spell.
+* new       -- A constructor.
+* letters   -- Returns the optimal set of letters as a string.
+* count     -- Returns how many words from 'dict' those letters spell.
+* dict_path -- Path to a dictionary file to use.
 
-The constructor will be called with the following attributes:
+A constructor call dould look like this:
 
-* dict     -- An array ref to a dictionary.
-* debug    -- Optional; may cause output of additional debug info.
+my $puzzle = EightLetters::YourModule->new( dict_path => 'path_to_dictionary_file' );
 
-A constructor call ould look like this:
+or
 
-my $puzzle = EightLetters::YourModule->new( dict => $dict_aref, debug => 0 );
+my $puzzle = EightLetters::YourModule->new; # Default dictionary.
 
 ...followed by...
 
@@ -61,13 +61,12 @@ safely be truncated).
 There is a working implementation (not in "module" form, not pure-Perl)
 at bin/eight.pl.
 
-My rough draft working implementation of a pure-Perl module is
-at lib/EightLetters/Oswald.pm.  On my machine that version takes 18 mintues
+My working implementation of a pure-Perl module is
+at lib/EightLetters.pm.  On my machine that version takes about two  mintues
 to run.
 
 
 Required distributions:
 Moo
-MooX::Types::MooseLike
 ... Add any other module names here that I will need to install to use your
 implementation
