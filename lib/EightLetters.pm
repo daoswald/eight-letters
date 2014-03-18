@@ -72,9 +72,9 @@ sub _build_letters {
 
 sub _increment_counts {
   my $buckets = [ values %{$_[0]->buckets} ];
-  foreach my $w ( values %{$_[0]->words} ) {
+  for my $w ( values %{$_[0]->words} ) {
     my $ws = $w->[SIGT];
-    foreach my $b ( @{$buckets} ) {
+    for my $b ( @{$buckets} ) {
       my $bs = $b->[SIGT];
       $b->[COUNT] += $w->[COUNT]
         if (  !( $ws->[0] & $bs->[0] )
