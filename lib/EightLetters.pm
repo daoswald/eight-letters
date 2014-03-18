@@ -35,7 +35,7 @@ sub _build_count {
 }
 
 sub _build_signature {
-  my( $bv, @hist ) = ( ZEROBV, (0)x26 );
+  my( $bv, @hist ) = ( ZEROBV, (0) x 26 );
   $hist[ ord() - ORD_A ]++ foreach split //, $_[1];
   foreach ( 0 .. $#hist ) {
     vec( $bv, $hist[$_] * 26 + $_, 1 ) = 1
@@ -73,14 +73,14 @@ sub _build_letters {
 sub _increment_counts {
   my $buckets = [ values %{$_[0]->buckets} ];
   foreach my $w ( values %{$_[0]->words} ) {
-    my $wd = $w->[SIGT];
+    my $ws = $w->[SIGT];
     foreach my $b ( @{$buckets} ) {
-      my $bd = $b->[SIGT];
+      my $bs = $b->[SIGT];
       $b->[COUNT] += $w->[COUNT]
-        if (  !( $wd->[0] & ~$bd->[0] )
-           && !( $wd->[1] & ~$bd->[1] )
-           && !( $wd->[2] & ~$bd->[2] )
-           && !( $wd->[3] & ~$bd->[3] ) );
+        if (  !( $ws->[0] & ~$bs->[0] )
+           && !( $ws->[1] & ~$bs->[1] )
+           && !( $ws->[2] & ~$bs->[2] )
+           && !( $ws->[3] & ~$bs->[3] ) );
     }
   }
 }  
