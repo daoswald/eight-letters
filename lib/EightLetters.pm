@@ -1,7 +1,5 @@
 package EightLetters;
 
-use strict;
-use warnings;
 use integer;
 
 use FindBin;
@@ -36,24 +34,23 @@ sub _build_count {
 
 sub _build_signature {
   my( $bv, @hist ) = ( ZEROBV, (0) x 26 );
-  $hist[ ord() - ORD_A ]++ foreach split //, $_[1];
-  foreach ( 0 .. $#hist ) {
-    vec( $bv, $hist[$_] * 26 + $_, 1 ) = 1
-      while $hist[$_]--;
+  $hist[ ord() - ORD_A ]++ for split //, $_[1];
+  for ( 0 .. $#hist ) {
+    vec( $bv, $hist[$_] * 26 + $_, 1 ) = 1 while $hist[$_]--;
   }
   return [ unpack 'Q4', $bv ];
 }
 
 sub _organize_words {
   my( $b, $w ) = ( $_[0]->buckets, $_[0]->words );
-  foreach ( @{$_[0]->dict} ) {
+  for ( @{$_[0]->dict} ) {
     my $letters = join '', sort split //;
     my $ref = ( 8 == length ) ? $b : $w;
     $ref->{$letters} = [ $_, $_[0]->_build_signature($_), 0 ]
         unless exists $ref->{$letters};
     $ref->{$letters}[COUNT]++;
   }
-  foreach my $bucket ( values %$b ) {
+  for my $bucket ( values %$b ) {
     $_ = ~$_ for @{$bucket->[SIGT]};
   }
 }
