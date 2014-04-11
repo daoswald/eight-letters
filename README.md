@@ -33,25 +33,7 @@ my $puzzle = EightLetters::YourModule->new; # Default dictionary.
 my $best_letters = $puzzle->letters;
 my $num_words_spelled = $puzzle->count;
 
-
-For details and ideas on impmementation, see the POD in:
-
-* Role::EightLetters      -- A Moo role you may optionally use to
-                             facilitate your module.
-
-* EightLetters::Template  -- A Moo template class you may optionally
-                             use as a starting point to build upon,
-                             or even subclass it if you wish.
-
-See also the slides in ./eightletters_slides.odf.
-
-Here's what will happen.  Add your module's name to the list contained in
-bin/bencheight.pl, and your module will be benchmarked against the others.
-
-The benchmark script willcall the constructor, and then call
-the two accessors: letters, and count.  All modules in the list will be
-benchmarked, and the results will be sent to the screen.  This may take a long
-time.
+See also the slides in ./eightletters_slides.odf (a little outdated.)
 
 Remember: We are only concerned with words that are eight characters or less.
 The dictionary supplied contains longer words too, and also contains some words
