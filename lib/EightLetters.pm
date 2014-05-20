@@ -12,16 +12,17 @@ use constant {
   ORD_A      => ord 'a',
 };
 
-has dict_path       => ( is => 'ro', default => DICTIONARY );
-has dict            => ( is => 'lazy' );
 has count           => ( is => 'lazy' );
 has letters         => ( is => 'lazy' );
-has buckets         => ( is => 'rw', default => sub { [] } );
-has words           => ( is => 'rw', default => sub { [] } );
+
+has _dict_path      => ( is => 'ro', default => DICTIONARY );
+has _dict           => ( is => 'lazy' );
+has _buckets        => ( is => 'rw', default => sub { [] } );
+has _words          => ( is => 'rw', default => sub { [] } );
 has _count_internal => ( is => 'rw'   );
 
-sub _build_dict {
-  open my $dict_fh, '<', $_[0]->dict_path or die $!;
+sub _build__dict {
+  open my $dict_fh, '<', $_[0]->_dict_path or die $!;
   return [ map { ( m/^([a-z]{1,8})\b/ && $1 ) || () } <$dict_fh> ];
 }
 
@@ -40,8 +41,7 @@ sub _build_signature {
 }
 
 sub _sig_to_alpha {
-  my ($self, $signature ) = @_;
-  my $bv = pack 'Q4', @{$signature};
+  my $bv = pack 'Q4', @{$_[1]};
   my %letter;
   vec($bv,$_,1) && $letter{chr(($_%26)+ORD_A)}++ for 0 .. 255;
   return join '', map { $_ x $letter{$_} } sort keys %letter;
@@ -52,7 +52,7 @@ sub _organize_words {
   my( $bucket, $word ) = ( {}, {} );
 
   # Fill them (bucket or word) based on size. Incrementing counts on the fly.
-  for ( @{$_[0]->dict} ) {
+  for ( @{$_[0]->_dict} ) {
     my $letters = join '', sort split //;
 
     # Alias $bucket or $word.
@@ -64,33 +64,31 @@ sub _organize_words {
   }
 
   # Retain only the sigs and counts; we don't care about the letters anymore.
-  @{$_[0]->buckets} = values %{$bucket};
-  @{$_[0]->words}   = values %{$word};
+  @{$_[0]->_buckets} = values %{$bucket};
+  @{$_[0]->_words}   = values %{$word};
 }
 
 sub _build_letters {
-  my $self = shift;
-
   print "Organizing words.\n";
-  $self->_organize_words;
+  $_[0]->_organize_words;
 
   print "Tallying buckets.\n";
-  my( $letters, $count ) = $self->_increment_counts;
-  $self->_count_internal($count);
+  my( $letters, $count ) = $_[0]->_increment_counts;
+  $_[0]->_count_internal($count);
   return $letters;
 }
 
 sub _increment_counts {
   my $best = [undef,0];
-  for my $b ( @{$_[0]->buckets} ) {
-    my $bs = $b->[SIGT];
-    for my $w ( @{$_[0]->words} ) {
+  for my $b ( @{$_[0]->_buckets} ) {
+    my( $bs0, $bs1, $bs2, $bs3 ) = map { ~$_ } @{$b->[SIGT]};
+    for my $w ( @{$_[0]->_words} ) {
       my $ws = $w->[SIGT];
       $b->[COUNT] += $w->[COUNT]
-        if(  !( $ws->[0] & ~$bs->[0] )
-          && !( $ws->[1] & ~$bs->[1] )
-          && !( $ws->[2] & ~$bs->[2] )
-          && !( $ws->[3] & ~$bs->[3] ) );
+        if(  !( $ws->[0] & $bs0 )
+          && !( $ws->[1] & $bs1 )
+          && !( $ws->[2] & $bs2 )
+          && !( $ws->[3] & $bs3 ) );
     }
     $best = $b if $b->[COUNT] > $best->[COUNT];
   }
