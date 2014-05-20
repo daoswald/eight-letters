@@ -1,15 +1,13 @@
 package EightLetters;
 
 use integer;
-
 use FindBin;
 use Moo;
 
 use constant {
   DICTIONARY => "$FindBin::Bin/../lib/dict/2of12inf.txt",
-  WORD       => 0,
-  SIGT       => 1,
-  COUNT      => 2,
+  SIGT       => 0,
+  COUNT      => 1,
   ZEROBV     => do { my $bv; vec( $bv, $_ * 32, 32 ) = 0 for 0 .. 7; $bv },
   ORD_A      => ord 'a',
 };
@@ -18,8 +16,8 @@ has dict_path       => ( is => 'ro', default => DICTIONARY );
 has dict            => ( is => 'lazy' );
 has count           => ( is => 'lazy' );
 has letters         => ( is => 'lazy' );
-has buckets         => ( is => 'rw', default => sub { {} } );
-has words           => ( is => 'rw', default => sub { {} } );
+has buckets         => ( is => 'rw', default => sub { [] } );
+has words           => ( is => 'rw', default => sub { [] } );
 has _count_internal => ( is => 'rw'   );
 
 sub _build_dict {
@@ -50,17 +48,24 @@ sub _sig_to_alpha {
 }
 
 sub _organize_words {
-  my( $b, $w ) = ( $_[0]->buckets, $_[0]->words );
+  # Set up temporary hash containers to contain (letters=>[sig,count],...)
+  my( $bucket, $word ) = ( {}, {} );
+
+  # Fill them (bucket or word) based on size. Incrementing counts on the fly.
   for ( @{$_[0]->dict} ) {
     my $letters = join '', sort split //;
-    my $ref = ( 8 == length ) ? $b : $w;
-    $ref->{$letters} = [ $_, $_[0]->_build_signature($_), 0 ]
-        unless exists $ref->{$letters};
-    $ref->{$letters}[COUNT]++;
+
+    # Alias $bucket or $word.
+    for my $group ( ( 8 == length ) ? $bucket : $word ) {
+      $group->{$letters} = [ $_[0]->_build_signature($_), 0 ]
+        unless exists $group->{$letters};
+      $group->{$letters}[COUNT]++;
+    }
   }
-  for my $bucket ( values %$b ) {
-    $_ = ~$_ for @{$bucket->[SIGT]};
-  }
+
+  # Retain only the sigs and counts; we don't care about the letters anymore.
+  @{$_[0]->buckets} = values %{$bucket};
+  @{$_[0]->words}   = values %{$word};
 }
 
 sub _build_letters {
@@ -70,38 +75,26 @@ sub _build_letters {
   $self->_organize_words;
 
   print "Tallying buckets.\n";
-  $self->_increment_counts;
-  
-  print "Finding biggest bucket.\n";
-   my( $bucket_name, $count ) = $self->_count_buckets;
-   $self->_count_internal($count);
-   return $bucket_name;
+  my( $letters, $count ) = $self->_increment_counts;
+  $self->_count_internal($count);
+  return $letters;
 }
 
 sub _increment_counts {
-  my $buckets = [ values %{$_[0]->buckets} ];
-  for my $w ( values %{$_[0]->words} ) {
-    my $ws = $w->[SIGT];
-    for my $b ( @{$buckets} ) {
-      my $bs = $b->[SIGT];
+  my $best = [undef,0];
+  for my $b ( @{$_[0]->buckets} ) {
+    my $bs = $b->[SIGT];
+    for my $w ( @{$_[0]->words} ) {
+      my $ws = $w->[SIGT];
       $b->[COUNT] += $w->[COUNT]
-        if (  !( $ws->[0] & $bs->[0] )
-           && !( $ws->[1] & $bs->[1] )
-           && !( $ws->[2] & $bs->[2] )
-           && !( $ws->[3] & $bs->[3] ) );
+        if(  !( $ws->[0] & ~$bs->[0] )
+          && !( $ws->[1] & ~$bs->[1] )
+          && !( $ws->[2] & ~$bs->[2] )
+          && !( $ws->[3] & ~$bs->[3] ) );
     }
+    $best = $b if $b->[COUNT] > $best->[COUNT];
   }
-}  
-
-sub _count_buckets {
-  my( $count, $buckets, $letters ) = ( 0, $_[0]->buckets, '' );
-  while( my( $bucket_key, $bucket ) = each %$buckets ) {
-    if( $bucket->[COUNT] > $count ) {
-      $letters = $bucket_key;
-      $count = $bucket->[COUNT];
-    }
-  }
-  return ( $letters, $count );
+  return( $_[0]->_sig_to_alpha($best->[SIGT]), $best->[COUNT] );
 }
 
 1;
