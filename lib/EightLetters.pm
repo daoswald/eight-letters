@@ -41,6 +41,14 @@ sub _build_signature {
   return [ unpack 'Q4', $bv ];
 }
 
+sub _sig_to_alpha {
+  my ($self, $signature ) = @_;
+  my $bv = pack 'Q4', @{$signature};
+  my %letter;
+  vec($bv,$_,1) && $letter{chr(($_%26)+ORD_A)}++ for 0 .. 255;
+  return join '', map { $_ x $letter{$_} } sort keys %letter;
+}
+
 sub _organize_words {
   my( $b, $w ) = ( $_[0]->buckets, $_[0]->words );
   for ( @{$_[0]->dict} ) {
