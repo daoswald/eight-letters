@@ -157,4 +157,3 @@ void _process_bucket( SV* self, SV* b, SV* words, int SIGT, int COUNT ) {
     AV* ws_av = (AV*) av_fetch(words_av,SIGT,0);
   }
 }
-}
