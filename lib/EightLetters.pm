@@ -3,7 +3,6 @@ package EightLetters;
 use integer;
 use FindBin;
 use Moo;
-use List::Util 'reduce';
 use File::Slurp;
 use Inline C => 'DATA';
 
@@ -76,27 +75,16 @@ sub _build_letters {
   $bucket_name;
 }
 
-#sub _increment_counts {
-#  my $buckets = [ values %{$_[0]->buckets} ];
-#  for my $w ( values %{$_[0]->words} ) {
-#    my $ws = $w->[SIGT];
-#    for my $b ( @{$buckets} ) {
-#      my $bs = $b->[SIGT];
-#      $b->[COUNT] += $w->[COUNT]
-#        if (  !( $ws->[0] & $bs->[0] )
-#           && !( $ws->[1] & $bs->[1] )
-#           && !( $ws->[2] & $bs->[2] )
-#           && !( $ws->[3] & $bs->[3] ) );
-#    }
-#  }
-#}  
 
 sub _increment_counts {
   my $words = [ values %{$_[0]->words} ];
   for my $b ( values %{$_[0]->buckets} ) {
-    $_[0]->_process_bucket($b,$words,SIGT,COUNT);
+#    $_[0]->_process_bucket( $b, $words );
+    $_[0]->_process_bucket( $b, $words, SIGT, COUNT );
   }
 }
+
+# This subroutine is replaced by an Inline::C implementation.
 
 #sub _process_bucket {
 #  my( $self, $b, $words ) = @_;
@@ -107,7 +95,8 @@ sub _increment_counts {
 #      if(  !( $bs->[0] & $ws->[0] )
 #        && !( $bs->[1] & $ws->[1] )
 #        && !( $bs->[2] & $ws->[2] )
-#        && !( $bs->[3] & $ws->[3] ) );
+#        && !( $bs->[3] & $ws->[3] )
+#    );
 #  }
 #}
 
@@ -128,32 +117,42 @@ sub _count_buckets {
 __DATA__
 __C__
 
-// sub _process_bucket {
-//   my( $self, $b, $words ) = @_;
-//   my $bs = $b->[SIGT];
-//   for my $w ( @{$words} ) {
-//     my $ws = $w->[SIGT];
-//     $b->[COUNT] += $w->[COUNT]
-//       if(  !( $bs->[0] & $ws->[0] )
-//         && !( $bs->[1] & $ws->[1] )
-//         && !( $bs->[2] & $ws->[2] )
-//         && !( $bs->[3] & $ws->[3] ) );
-//   }
-// }
+/* Big risk: We aren't checking SvROK anywhere.  Know your data is clean,
+ * because if it isn't, you'll core-dump.
+ * ..... Efficiency trumps safety here. This is called in a tight loop. .....
+ */
 
 void _process_bucket( SV* self, SV* b, SV* words, int SIGT, int COUNT ) {
 
-  if( ! SvROK(b) || ( SvTYPE( SvRV(b) ) != SVt_PVAV ) )
-    croak( "_process_bucket: First argument must be an array reference." );
-    
-  if( ! SvROK(words) || ( SvTYPE( SvRV(words) ) != SVt_PVAV ) )
-    croak( "_process_bucket: Second argument must be an array reference." );
-
-  AV* b_av = (AV*) SvRV(b);
+  // Unpack the arguments.
+  AV* b_av     = (AV*) SvRV(b);
   AV* words_av = (AV*) SvRV(words);
-  AV* bs = (AV*) av_fetch(b_av,SIGT,0);
-  size_t i = 0;
-  for( i=0; i <= av_top_index(words_av); ++i ) {
-    AV* ws_av = (AV*) av_fetch(words_av,SIGT,0);
+
+  AV* bs_av    = (AV*) SvRV( *( av_fetch(b_av,SIGT,0) ) );
+
+  uint64_t bs[4];
+  size_t bsix = 0;
+  for( bsix=0; bsix != 4; ++bsix ) {
+    bs[bsix] = SvIV( *( av_fetch(bs_av,bsix,0) ) );
+  }
+
+  size_t ix=0;
+  size_t top = av_top_index(words_av);
+  for( ix = 0; ix <= top; ++ix ) {
+    
+    AV* word_av = (AV*) SvRV( *( av_fetch(words_av,ix,0 ) ) );
+    AV* ws_av   = (AV*) SvRV( *( av_fetch(word_av,SIGT,0) ) );
+
+    if(  !( SvIV( *( av_fetch(ws_av,0,0) ) ) & bs[0] )
+      && !( SvIV( *( av_fetch(ws_av,1,0) ) ) & bs[1] )
+      && !( SvIV( *( av_fetch(ws_av,2,0) ) ) & bs[2] )
+      && !( SvIV( *( av_fetch(ws_av,3,0) ) ) & bs[3] )
+    ) {
+      SV* b_count = (SV*) *( av_fetch(b_av,COUNT,0) );
+      sv_setiv(
+        b_count,
+        SvIV(b_count) + SvIV( *( av_fetch(word_av,COUNT,0) ) )
+      );
+    }
   }
 }
