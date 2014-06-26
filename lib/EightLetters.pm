@@ -10,7 +10,7 @@ use constant {
   DICTIONARY => "$FindBin::Bin/../lib/dict/2of12inf.txt",
   SIGT       => 0,
   COUNT      => 1,
-  ZEROBV     => do { my $bv; vec( $bv, $_ * 32, 32 ) = 0 for 0 .. 7; $bv },
+  ZEROBV     => do { my $bv; vec( $bv, $_ * 32, 32 ) = 0 for 0..1; $bv },
   ORD_A      => ord 'a'
 };
 
@@ -36,7 +36,7 @@ has _count_internal => ( is => 'rw'   );
 sub _build_dict {
   [
     map {
-      ( !m/(\w).*\1/aa && m/^([abcdefghilmnoprstuvwy]{1,8})\b/aa && $1 ) || ()
+      ( !m/(\w)(?=.*\1)/aa && m/^([abcdefghilmnoprstuvwy]{1,8})\b/aa && $1 ) || ()
     } File::Slurp::read_file($_[0]->dict_path)
   ]
 }
@@ -142,17 +142,13 @@ void _process_bucket( SV* self, SV* b, SV* words, int SIGT, int COUNT ) {
   SV* b_count = (SV*) *( av_fetch(b_av,COUNT,0) );
   AV* bs_av    = (AV*) SvRV( *( av_fetch(b_av,SIGT,0) ) );
 
-  uint64_t bs[4];
-  size_t bsix = 0;
-  for( bsix=0; bsix != 4; ++bsix ) {
-    bs[bsix] = SvIV( *( av_fetch(bs_av,bsix,0) ) );
-  }
+  uint64_t bs = SvIV( *( av_fetch(bs_av,0,0) ) );
 
   size_t ix=0;
   size_t top = av_top_index(words_av);
 
   // Optimization: Skip remainder of bucket if it's not growing fast enough.
-  // Assumes words are in relatively random order (hash randomization offers).
+  // Assumes words are in relatively random order (hash randomization).
   int stop_test_ix = top / 4;
   int stop_min_count = stop_test_ix / 100;
   
@@ -164,15 +160,7 @@ void _process_bucket( SV* self, SV* b, SV* words, int SIGT, int COUNT ) {
     AV* word_av = (AV*) SvRV( *( av_fetch(words_av,ix,0 ) ) );
     AV* ws_av   = (AV*) SvRV( *( av_fetch(word_av,SIGT,0) ) );
 
-    if(  !( SvIV( *( av_fetch(ws_av,0,0) ) ) & bs[0] )
-      && !( SvIV( *( av_fetch(ws_av,1,0) ) ) & bs[1] )
-      && !( SvIV( *( av_fetch(ws_av,2,0) ) ) & bs[2] )
-      && !( SvIV( *( av_fetch(ws_av,3,0) ) ) & bs[3] )
-    ) {
-      sv_setiv(
-        b_count,
-        SvIV(b_count) + SvIV( *( av_fetch(word_av,COUNT,0) ) )
-      );
-    }
+    if(  !( SvIV( *( av_fetch(ws_av,0,0) ) ) & bs ) )
+      sv_setiv( b_count, SvIV(b_count) + SvIV( *(av_fetch(word_av,COUNT,0)) ) );
   }
 }
