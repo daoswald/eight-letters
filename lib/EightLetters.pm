@@ -8,9 +8,8 @@ use Inline C => 'DATA';
 
 use constant {
   DICTIONARY => "$FindBin::Bin/../lib/dict/2of12inf.txt",
-  WORD       => 0,
-  SIGT       => 1,
-  COUNT      => 2,
+  SIGT       => 0,
+  COUNT      => 1,
   ZEROBV     => do { my $bv; vec( $bv, $_ * 32, 32 ) = 0 for 0 .. 7; $bv },
   ORD_A      => ord 'a'
 };
@@ -51,7 +50,7 @@ sub _organize_words {
   for ( @{$_[0]->dict} ) {
     my $letters = join '', sort split //;
     my $ref = ( 8 == length ) ? $b : $w;
-    $ref->{$letters} = [ $_, $_[0]->_build_signature($_), 0 ]
+    $ref->{$letters} = [ $_[0]->_build_signature($_), 0 ]
         unless exists $ref->{$letters};
     $ref->{$letters}[COUNT]++;
   }
