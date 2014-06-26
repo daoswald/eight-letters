@@ -23,11 +23,21 @@ has buckets         => ( is => 'rw', default => sub { {} } );
 has words           => ( is => 'rw', default => sub { {} } );
 has _count_internal => ( is => 'rw'   );
 
-# Skip words with jkqvxz.
+# Skip words with jkqvxz (each letter having less than 1% frequency in English
+# usage for both the Wikipedia article and Cornel study.
+# Wikipedia: http://en.wikipedia.org/wiki/Letter_frequency
+# Cornel: http://www.math.cornell.edu/~mec/2003-2004/cryptography/subs/frequencies.html
+#        W.P.    Cornel
+# j ==  0.153%    0.10
+# k ==  0.772%    0.69
+# q ==  0.095%    0.11
+# x ==  0.150%    0.17
+# z ==  0.074%    0.07
+
 sub _build_dict {
   [
     map {
-      ( m/^([abcdefghilmnoprstuwy]{1,8})\b/ && $1 ) || ()
+      ( m/^([abcdefghilmnoprstuvwy]{1,8})\b/ && $1 ) || ()
     } read_file($_[0]->dict_path)
   ]
 }
@@ -79,8 +89,8 @@ sub _build_letters {
 sub _increment_counts {
   my $words = [ values %{$_[0]->words} ];
   for my $b ( values %{$_[0]->buckets} ) {
-#    $_[0]->_process_bucket( $b, $words );
-    $_[0]->_process_bucket( $b, $words, SIGT, COUNT );
+#    $_[0]->_process_bucket( $b, $words ); # Perl implementation.
+    $_[0]->_process_bucket( $b, $words, SIGT, COUNT ); # Inline::C (XS) call.
   }
 }
 
@@ -128,6 +138,7 @@ void _process_bucket( SV* self, SV* b, SV* words, int SIGT, int COUNT ) {
   AV* b_av     = (AV*) SvRV(b);
   AV* words_av = (AV*) SvRV(words);
 
+  SV* b_count = (SV*) *( av_fetch(b_av,COUNT,0) );
   AV* bs_av    = (AV*) SvRV( *( av_fetch(b_av,SIGT,0) ) );
 
   uint64_t bs[4];
@@ -138,8 +149,17 @@ void _process_bucket( SV* self, SV* b, SV* words, int SIGT, int COUNT ) {
 
   size_t ix=0;
   size_t top = av_top_index(words_av);
+
+  // Optimization: Skip remainder of bucket if it's not growing fast enough.
+  // Assumes words are in relatively random order (hash randomization offers).
+  int stop_test_ix = top / 4;
+  int stop_min_count = stop_test_ix / 100;
+  
   for( ix = 0; ix <= top; ++ix ) {
     
+    // Execution of optimization
+    if( ix > stop_test_ix && SvIV(b_count) < stop_min_count ) break;    
+
     AV* word_av = (AV*) SvRV( *( av_fetch(words_av,ix,0 ) ) );
     AV* ws_av   = (AV*) SvRV( *( av_fetch(word_av,SIGT,0) ) );
 
@@ -148,7 +168,6 @@ void _process_bucket( SV* self, SV* b, SV* words, int SIGT, int COUNT ) {
       && !( SvIV( *( av_fetch(ws_av,2,0) ) ) & bs[2] )
       && !( SvIV( *( av_fetch(ws_av,3,0) ) ) & bs[3] )
     ) {
-      SV* b_count = (SV*) *( av_fetch(b_av,COUNT,0) );
       sv_setiv(
         b_count,
         SvIV(b_count) + SvIV( *( av_fetch(word_av,COUNT,0) ) )
