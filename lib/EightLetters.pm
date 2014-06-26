@@ -1,9 +1,9 @@
 package EightLetters;
 
 use integer;
-use FindBin;
+use FindBin ();
 use Moo;
-use File::Slurp;
+use File::Slurp ();
 use Inline C => 'DATA';
 
 use constant {
@@ -37,8 +37,8 @@ has _count_internal => ( is => 'rw'   );
 sub _build_dict {
   [
     map {
-      ( m/^([abcdefghilmnoprstuvwy]{1,8})\b/ && $1 ) || ()
-    } read_file($_[0]->dict_path)
+      ( !m/(\w).*\1/ && m/^([abcdefghilmnoprstuvwy]{1,8})\b/ && $1 ) || ()
+    } File::Slurp::read_file($_[0]->dict_path)
   ]
 }
 
@@ -89,7 +89,7 @@ sub _build_letters {
 sub _increment_counts {
   my $words = [ values %{$_[0]->words} ];
   for my $b ( values %{$_[0]->buckets} ) {
-#    $_[0]->_process_bucket( $b, $words ); # Perl implementation.
+#    $_[0]->_process_bucket( $b, $words ); # Perl implementation call.
     $_[0]->_process_bucket( $b, $words, SIGT, COUNT ); # Inline::C (XS) call.
   }
 }
@@ -127,9 +127,11 @@ sub _count_buckets {
 __DATA__
 __C__
 
-/* Big risk: We aren't checking SvROK anywhere.  Know your data is clean,
- * because if it isn't, you'll core-dump.
- * ..... Efficiency trumps safety here. This is called in a tight loop. .....
+#define PERL_NO_GET_CONTEXT
+
+/* Big risk: We aren't checking SvROK or SvTYPE anywhere.  Know your data is
+ * clean, because if it isn't, you'll core-dump.
+ * ..... EFFICIENCY TRUPS SAFETY HERE. This is called in a tight loop. .....
  */
 
 void _process_bucket( SV* self, SV* b, SV* words, int SIGT, int COUNT ) {
