@@ -5,6 +5,8 @@ use FindBin;
 use Moo;
 use File::Slurp;
 use Inline C => 'DATA';
+no warnings 'experimental::postderef';
+use feature 'postderef';
 
 use constant {
   DICTIONARY => "$FindBin::Bin/../lib/dict/2of12inf.txt",
@@ -47,7 +49,7 @@ sub _build_signature {
 
 sub _organize_words {
   my( $b, $w ) = ( $_[0]->buckets, $_[0]->words );
-  for ( @{$_[0]->dict} ) {
+  for ( $_[0]->dict->@* ) {
     my $letters = join '', sort split //;
     my $ref = ( 8 == length ) ? $b : $w;
     $ref->{$letters} = [ $_[0]->_build_signature($_), 0 ]
@@ -55,7 +57,7 @@ sub _organize_words {
     $ref->{$letters}[COUNT]++;
   }
   for my $bucket ( values %$b ) {
-    $_ = ~$_ for @{$bucket->[SIGT]};
+    $_ = ~$_ for $bucket->[SIGT]->@*;
   }
 }
 
@@ -76,8 +78,8 @@ sub _build_letters {
 
 
 sub _increment_counts {
-  my $words = [ values %{$_[0]->words} ];
-  for my $b ( values %{$_[0]->buckets} ) {
+  my $words = [ values $_[0]->words->%* ];
+  for my $b ( values $_[0]->buckets->%* ) {
 #    $_[0]->_process_bucket( $b, $words );
     $_[0]->_process_bucket( $b, $words, SIGT, COUNT );
   }
@@ -88,7 +90,7 @@ sub _increment_counts {
 #sub _process_bucket {
 #  my( $self, $b, $words ) = @_;
 #  my $bs = $b->[SIGT];
-#  for my $w ( @{$words} ) {
+#  for my $w ( $words->@* ) {
 #    my $ws = $w->[SIGT];
 #    $b->[COUNT] += $w->[COUNT]
 #      if(  !( $bs->[0] & $ws->[0] )
