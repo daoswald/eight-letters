@@ -131,15 +131,15 @@ void _process_bucket( SV* self, SV* b, SV* words ) {
 
   // Unpack the arguments.
   AV* b_av     = (AV*) SvRV(b);
+  SV* b_count  = (SV*) *( av_fetch(b_av,COUNT,0) );
   AV* words_av = (AV*) SvRV(words);
-
   AV* bs_av    = (AV*) SvRV( *( av_fetch(b_av,SIGT,0) ) );
 
   uint64_t bs[4];
-  size_t bsix=0;
-  for( ; bsix != 4; ++bsix ) {
-    bs[bsix] = SvIV( *( av_fetch(bs_av,bsix,0) ) );
-  }
+  bs[0] = SvIV( *( av_fetch(bs_av,0,0) ) );
+  bs[1] = SvIV( *( av_fetch(bs_av,1,0) ) );
+  bs[2] = SvIV( *( av_fetch(bs_av,2,0) ) );
+  bs[3] = SvIV( *( av_fetch(bs_av,3,0) ) );
 
   size_t ix=0;
   size_t top = av_top_index(words_av);
@@ -153,11 +153,7 @@ void _process_bucket( SV* self, SV* b, SV* words ) {
       && !( SvIV( *( av_fetch(ws_av,2,0) ) ) & bs[2] )
       && !( SvIV( *( av_fetch(ws_av,3,0) ) ) & bs[3] )
     ) {
-      SV* b_count = (SV*) *( av_fetch(b_av,COUNT,0) );
-      sv_setiv(
-        b_count,
-        SvIV(b_count) + SvIV( *( av_fetch(word_av,COUNT,0) ) )
-      );
+      sv_setiv( b_count, SvIV(b_count) + SvIV(*(av_fetch(word_av,COUNT,0))) );
     }
 
   }
