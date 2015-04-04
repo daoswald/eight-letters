@@ -5,6 +5,7 @@ use FindBin;
 use Moo;
 use File::Slurp;
 use Inline C => 'DATA';
+use Inline C => Config => OPTIMIZE => '-Ofast';
 no warnings 'experimental::postderef';
 use feature 'postderef';
 
@@ -80,8 +81,7 @@ sub _build_letters {
 sub _increment_counts {
   my $words = [ values $_[0]->words->%* ];
   for my $b ( values $_[0]->buckets->%* ) {
-#    $_[0]->_process_bucket( $b, $words );
-    $_[0]->_process_bucket( $b, $words, SIGT, COUNT );
+    $_[0]->_process_bucket( $b, $words );
   }
 }
 
@@ -123,7 +123,11 @@ __C__
  * ..... Efficiency trumps safety here. This is called in a tight loop. .....
  */
 
-void _process_bucket( SV* self, SV* b, SV* words, int SIGT, int COUNT ) {
+#define SIGT 0
+#define COUNT 1
+//1
+
+void _process_bucket( SV* self, SV* b, SV* words ) {
 
   // Unpack the arguments.
   AV* b_av     = (AV*) SvRV(b);
@@ -132,14 +136,14 @@ void _process_bucket( SV* self, SV* b, SV* words, int SIGT, int COUNT ) {
   AV* bs_av    = (AV*) SvRV( *( av_fetch(b_av,SIGT,0) ) );
 
   uint64_t bs[4];
-  size_t bsix = 0;
-  for( bsix=0; bsix != 4; ++bsix ) {
+  size_t bsix=0;
+  for( ; bsix != 4; ++bsix ) {
     bs[bsix] = SvIV( *( av_fetch(bs_av,bsix,0) ) );
   }
 
   size_t ix=0;
   size_t top = av_top_index(words_av);
-  for( ix = 0; ix <= top; ++ix ) {
+  for( ; ix <= top; ++ix ) {
     
     AV* word_av = (AV*) SvRV( *( av_fetch(words_av,ix,0 ) ) );
     AV* ws_av   = (AV*) SvRV( *( av_fetch(word_av,SIGT,0) ) );
@@ -155,5 +159,7 @@ void _process_bucket( SV* self, SV* b, SV* words, int SIGT, int COUNT ) {
         SvIV(b_count) + SvIV( *( av_fetch(word_av,COUNT,0) ) )
       );
     }
+
   }
+  
 }
