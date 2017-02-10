@@ -29,7 +29,7 @@ has _count_internal => ( is => 'rw'   );
 sub _build_dict {
   [
     map {
-      ( m/^([abcdefghilmnoprstuwy]{1,8})\b/ && $1 ) || ()
+      ( m/^([abcdefghijklmnopqrstuwxy]{1,8})\b/ && $1 ) || ()
     } read_file($_[0]->dict_path)
   ]
 }
