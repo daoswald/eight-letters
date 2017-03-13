@@ -25,7 +25,7 @@ has buckets         => ( is => 'rw', default => sub { {} } );
 has words           => ( is => 'rw', default => sub { {} } );
 has _count_internal => ( is => 'rw'   );
 
-# Skip words with jkqvxz.
+# Skipping words with jkqvxz is obviously faster but makes unsafe assumptions for an arbitrary dict.
 sub _build_dict {
   [
     map {
