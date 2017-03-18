@@ -8,13 +8,15 @@ use Inline C => 'DATA';
 use Inline C => Config => OPTIMIZE => '-Ofast';
 no warnings 'experimental::postderef';
 use feature 'postderef';
+use Parallel::ForkManager;
 
 use constant {
   DICTIONARY => "$FindBin::Bin/../lib/dict/2of12inf.txt",
   SIGT       => 0,
   COUNT      => 1,
   ZEROBV     => do { my $bv; vec( $bv, $_ * 32, 32 ) = 0 for 0 .. 7; $bv },
-  ORD_A      => ord 'a'
+  ORD_A      => ord 'a',
+  PARALLEL_PROCESSES => 64,
 };
 
 has dict_path       => ( is => 'ro', default => DICTIONARY );
@@ -24,6 +26,7 @@ has letters         => ( is => 'lazy' );
 has buckets         => ( is => 'rw', default => sub { {} } );
 has words           => ( is => 'rw', default => sub { {} } );
 has _count_internal => ( is => 'rw'   );
+has _pm             => (is => 'lazy');
 
 # Skipping words with jkqvxz is obviously faster but makes unsafe assumptions for an arbitrary dict.
 sub _build_dict {
@@ -48,6 +51,8 @@ sub _build_signature {
   [ unpack 'Q4', $bv ];
 }
 
+sub _build__pm {Parallel::ForkManager->new(PARALLEL_PROCESSES)}
+
 sub _organize_words {
   my( $b, $w ) = ( $_[0]->buckets, $_[0]->words );
   for ( $_[0]->dict->@* ) {
@@ -70,7 +75,7 @@ sub _build_letters {
 
   print "Tallying buckets.\n";
   $self->_increment_counts;
-  
+
   print "Finding biggest bucket.\n";
   my( $bucket_name, $count ) = $self->_count_buckets;
   $self->_count_internal($count);
@@ -80,8 +85,14 @@ sub _build_letters {
 
 sub _increment_counts {
   my $words = [ values $_[0]->words->%* ];
+  my $bnum = 0;
+  my $pm = $_[0]->_pm;
   for my $b ( values $_[0]->buckets->%* ) {
+    $bnum++;
+    my $pid = $pm->start and next;
+    print "Bucket: ", $bnum, "\n";
     $_[0]->_process_bucket( $b, $words );
+    $pm->finish;
   }
 }
 
@@ -110,7 +121,7 @@ sub _count_buckets {
       $count = $bucket->[COUNT];
     }
   }
-  ( $letters, $count );
+  ($letters, $count);
 }
 
 1;
@@ -144,7 +155,7 @@ void _process_bucket( SV* self, SV* b, SV* words ) {
   size_t ix=0;
   size_t top = av_top_index(words_av);
   for( ; ix <= top; ++ix ) {
-    
+
     AV* word_av = (AV*) SvRV( *( av_fetch(words_av,ix,0 ) ) );
     AV* ws_av   = (AV*) SvRV( *( av_fetch(word_av,SIGT,0) ) );
 
@@ -155,7 +166,5 @@ void _process_bucket( SV* self, SV* b, SV* words ) {
     ) {
       sv_setiv( b_count, SvIV(b_count) + SvIV(*(av_fetch(word_av,COUNT,0))) );
     }
-
   }
-  
 }

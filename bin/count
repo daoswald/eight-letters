@@ -14,6 +14,4 @@ use constant TEST_DICT => "$FindBin::Bin/../lib/dict/test_dict.txt";
 
 print $_->letters, " spells ", $_->count, " words.\n" for EightLetters->new;
 
-END{
-  printf "Duration: %.03f seconds.\n", Time::HiRes::tv_interval($t);
-}
+printf "Duration: %.03f seconds.\n", Time::HiRes::tv_interval($t);
