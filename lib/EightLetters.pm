@@ -8,7 +8,7 @@ use Inline C => 'DATA';
 use Inline C => Config => OPTIMIZE => '-Ofast';
 no warnings 'experimental::postderef';
 use feature 'postderef';
-use Parallel::ForkManager;
+#use Parallel::ForkManager;
 
 use constant {
   DICTIONARY => "$FindBin::Bin/../lib/dict/2of12inf.txt",
@@ -26,7 +26,7 @@ has letters         => ( is => 'lazy' );
 has buckets         => ( is => 'rw', default => sub { {} } );
 has words           => ( is => 'rw', default => sub { {} } );
 has _count_internal => ( is => 'rw'   );
-has _pm             => (is => 'lazy');
+#has _pm             => (is => 'lazy');
 
 # Skipping words with jkqvxz is obviously faster but makes unsafe assumptions for an arbitrary dict.
 sub _build_dict {
@@ -51,7 +51,7 @@ sub _build_signature {
   [ unpack 'Q4', $bv ];
 }
 
-sub _build__pm {Parallel::ForkManager->new(PARALLEL_PROCESSES)}
+#sub _build__pm {Parallel::ForkManager->new(PARALLEL_PROCESSES)}
 
 sub _organize_words {
   my( $b, $w ) = ( $_[0]->buckets, $_[0]->words );
@@ -85,14 +85,14 @@ sub _build_letters {
 
 sub _increment_counts {
   my $words = [ values $_[0]->words->%* ];
-  my $bnum = 0;
-  my $pm = $_[0]->_pm;
+#  my $bnum = 0;
+#  my $pm = $_[0]->_pm;
   for my $b ( values $_[0]->buckets->%* ) {
-    $bnum++;
-    my $pid = $pm->start and next;
-    print "Bucket: ", $bnum, "\n";
+#    $bnum++;
+#    my $pid = $pm->start and next;
+#    print "Bucket: ", $bnum, "\n";
     $_[0]->_process_bucket( $b, $words );
-    $pm->finish;
+#    $pm->finish;
   }
 }
 
