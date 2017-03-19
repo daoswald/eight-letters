@@ -1,19 +1,13 @@
 package EightLetters;
 
 use integer;
-
 use FindBin;
-
 use Moo;
-
 use File::Slurp;
-
 use Inline C => 'DATA';
 use Inline C => Config => OPTIMIZE => '-Ofast';
-
 use Parallel::ForkManager;
 use Sys::Info;
-
 no warnings 'experimental::postderef';
 use feature 'postderef';
 
@@ -132,23 +126,6 @@ sub _increment_counts {
     $pm->wait_all_children;
 }
 
-# This subroutine is replaced by an Inline::C implementation.
-
-#sub _process_bucket {
-#  my( $self, $b, $words ) = @_;
-#  my $bs = $b->[SIGT];
-#  for my $w ( $words->@* ) {
-#    my $ws = $w->[SIGT];
-#    $b->[COUNT] += $w->[COUNT]
-#      if(  !( $bs->[0] & $ws->[0] )
-#        && !( $bs->[1] & $ws->[1] )
-#        && !( $bs->[1] & $ws->[2] )
-#        && !( $bs->[3] & $ws->[3] )
-#    );
-#  }
-#}
-
-
 sub _count_buckets {
     my($count, $buckets, $letters) = (0, $_[0]->buckets, '');
     scalar keys $_[0]->buckets->%*; # Reset the iterator.
@@ -161,19 +138,34 @@ sub _count_buckets {
     ($letters, $count);
 }
 
+# This subroutine is replaced by an Inline::C implementation.
+
+#sub _process_bucket {
+#  my($self, $b, $words) = @_;
+#  my $bs = $b->[SIGT];
+#  for my $w ($words->@*) {
+#    my $ws = $w->[SIGT];
+#    $b->[COUNT] += $w->[COUNT]
+#      if(  !($bs->[0] & $ws->[0])
+#        && !($bs->[1] & $ws->[1])
+#        && !($bs->[1] & $ws->[2])
+#        && !($bs->[3] & $ws->[3])
+#    );
+#  }
+#}
+
 1;
 
 __DATA__
 __C__
 
-/* Big risk: We aren't checking SvROK anywhere.  Know your data is clean,
+/* Risk: We aren't checking SvROK anywhere. Know your data is clean,
  * because if it isn't, you'll core-dump.
- * ..... Efficiency trumps safety here. This is called in a tight loop. .....
+ * Efficiency trumps safety here. This is called in a tight loop.
  */
 
 #define SIGT 0
 #define COUNT 1
-//1
 
 void _process_bucket( SV* self, SV* b, SV* words ) {
 
