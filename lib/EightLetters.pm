@@ -77,7 +77,11 @@ sub _build_letters {
     print "Organizing words.\n";
     $self->_organize_words;
 
-    print "Tallying buckets.\n";
+    my $np = $self->_num_processes;
+    my $mult = CORE_MULTIPLIER;
+    my $ncores = $np/$mult;
+
+    print "Tallying buckets with $np processes ($ncores cores * $mult).\n";
     $self->_increment_counts;
 
     print "Finding biggest bucket.\n";
