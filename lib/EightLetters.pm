@@ -1,14 +1,21 @@
 package EightLetters;
 
 use integer;
+
 use FindBin;
+
 use Moo;
+
 use File::Slurp;
+
 use Inline C => 'DATA';
 use Inline C => Config => OPTIMIZE => '-Ofast';
+
+use Parallel::ForkManager;
+use Sys::Info;
+
 no warnings 'experimental::postderef';
 use feature 'postderef';
-#use Parallel::ForkManager;
 
 use constant {
     DICTIONARY          => "$FindBin::Bin/../lib/dict/2of12inf.txt",
@@ -16,7 +23,7 @@ use constant {
     COUNT               => 1,
     ZEROBV              => do {my $bv; vec($bv, $_*32, 32) = 0 for 0 .. 7; $bv},
     ORD_A               => ord 'a',
-    PARALLEL_PROCESSES  => 64,
+    CORE_MULTIPLIER     => 1,
 };
 
 has dict_path       => (is => 'ro', default => DICTIONARY);
@@ -26,7 +33,8 @@ has letters         => (is => 'lazy');
 has buckets         => (is => 'rw', default => sub {{}});
 has words           => (is => 'rw', default => sub {{}});
 has _count_internal => (is => 'rw');
-#has _pm             => (is => 'lazy');
+has _pm             => (is => 'lazy');
+has _num_processes  => (is => 'lazy');
 
 # Skipping words with jkqvxz is obviously faster but makes unsafe assumptions for an arbitrary dict.
 sub _build_dict {[map {(m/^([abcdefghijklmnopqrstuwxy]{1,8})\b/ && $1) || ()} read_file($_[0]->dict_path)]}
@@ -45,7 +53,12 @@ sub _build_signature {
     [unpack 'Q4', $bv];
 }
 
-#sub _build__pm {Parallel::ForkManager->new(PARALLEL_PROCESSES)}
+sub _build__num_processes {(Sys::Info->new->device('CPU')->count) * CORE_MULTIPLIER}
+
+sub _build__pm {
+    my $self = shift;
+    Parallel::ForkManager->new($self->_num_processes);
+}
 
 sub _organize_words {
     my($b, $w) = ($_[0]->buckets, $_[0]->words);
@@ -79,15 +92,43 @@ sub _build_letters {
 
 sub _increment_counts {
     my $words = [values $_[0]->words->%*];
-#  my $bnum = 0;
-#  my $pm = $_[0]->_pm;
-    for my $b (values $_[0]->buckets->%*) {
-#    $bnum++;
-#    my $pid = $pm->start and next;
-#    print "Bucket: ", $bnum, "\n";
-        $_[0]->_process_bucket($b, $words);
-#    $pm->finish;
+
+    my $n = 0;
+    my $m = $_[0]->_num_processes;
+
+    my @batches;
+    my $buckets = $_[0]->buckets;
+    scalar keys %$buckets; # Reset the iterator.
+
+    while (my ($key, $v) = each %$buckets) {
+        push @{$batches[$n++ % $m]}, [$key, $v];
     }
+
+    my $pm = $_[0]->_pm;
+    $pm->run_on_finish(
+        sub {
+           my ($pid, $exit_code, $id, $exit_signal, $core_dump, $dsr) = @_;
+
+           if (!defined $dsr) {
+               $id //= '';
+                die "No datastructure reference received from $pid:$id.\n";
+            }
+
+            foreach my $b (@$dsr) {
+                my ($k, $v) = @$b;
+                $buckets->{$k} = $v;
+            }
+        }
+    );
+
+    for my $batch (@batches) {
+        $pm->start and next;
+
+        $_[0]->_process_bucket($_->[1], $words) for @$batch;
+
+        $pm->finish(0, $batch);
+    }
+    $pm->wait_all_children;
 }
 
 # This subroutine is replaced by an Inline::C implementation.
@@ -100,7 +141,7 @@ sub _increment_counts {
 #    $b->[COUNT] += $w->[COUNT]
 #      if(  !( $bs->[0] & $ws->[0] )
 #        && !( $bs->[1] & $ws->[1] )
-#        && !( $bs->[2] & $ws->[2] )
+#        && !( $bs->[1] & $ws->[2] )
 #        && !( $bs->[3] & $ws->[3] )
 #    );
 #  }
@@ -109,6 +150,7 @@ sub _increment_counts {
 
 sub _count_buckets {
     my($count, $buckets, $letters) = (0, $_[0]->buckets, '');
+    scalar keys $_[0]->buckets->%*; # Reset the iterator.
     while(my($bucket_key, $bucket) = each %$buckets) {
         if($bucket->[COUNT] > $count) {
             $letters = $bucket_key;
