@@ -23,7 +23,7 @@ use constant {
     COUNT               => 1,
     ZEROBV              => do {my $bv; vec($bv, $_*32, 32) = 0 for 0 .. 7; $bv},
     ORD_A               => ord 'a',
-    CORE_MULTIPLIER     => 1,
+    CORE_MULTIPLIER     => 2,       # In testing, 2 is better on an i5 with 4 cores, and not worse on an i7 with 4 real, eight logical cores.
 };
 
 has dict_path       => (is => 'ro', default => DICTIONARY);
@@ -55,10 +55,7 @@ sub _build_signature {
 
 sub _build__num_processes {(Sys::Info->new->device('CPU')->count) * CORE_MULTIPLIER}
 
-sub _build__pm {
-    my $self = shift;
-    Parallel::ForkManager->new($self->_num_processes);
-}
+sub _build__pm {Parallel::ForkManager->new(shift()->_num_processes)}
 
 sub _organize_words {
     my($b, $w) = ($_[0]->buckets, $_[0]->words);
