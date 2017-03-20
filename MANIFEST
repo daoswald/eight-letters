@@ -1,0 +1,23 @@
+bin/count
+lib/dict/2+2gfreq.txt
+lib/dict/2+2lemma.txt
+lib/dict/2of12.txt
+lib/dict/2of12inf.txt
+lib/dict/2of4brif.txt
+lib/dict/3esl.txt
+lib/dict/5desk.txt
+lib/dict/6of12.txt
+lib/dict/agid.txt
+lib/dict/neol2007.txt
+lib/dict/readme.html
+lib/dict/ReadmeR5.html
+lib/dict/test_dict.txt
+lib/EightLetters.pm
+Makefile.PL
+MANIFEST			This list of files
+MANIFEST.SKIP
+README.md
+t/00-dictionary.t
+t/01-role-eightletters.t
+t/02-submission.t
+t/s2l.t

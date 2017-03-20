@@ -1,5 +1,11 @@
 package EightLetters;
 
+=head1 NAME
+
+EightLetters - Perl module to calculate which eight letter word spells the most words in a dictionary.
+
+=cut
+
 use integer;
 use FindBin;
 use Moo;
@@ -10,6 +16,8 @@ use Parallel::ForkManager;
 use Sys::Info;
 no warnings 'experimental::postderef';
 use feature 'postderef';
+
+our $VERSION = '2.0';
 
 use constant {
     DICTIONARY          => "$FindBin::Bin/../lib/dict/2of12inf.txt",
