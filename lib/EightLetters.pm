@@ -31,7 +31,7 @@ has _pm             => (is => 'lazy');
 has _num_processes  => (is => 'lazy');
 
 # Skipping words with jkqvxz is obviously faster but makes unsafe assumptions for an arbitrary dict.
-sub _build_dict {[map {(m/^([abcdefghijklmnopqrstuwxy]{1,8})\b/ && $1) || ()} read_file($_[0]->dict_path)]}
+sub _build_dict {[map {(m/^([a-z]{1,8})\b/ && $1) || ()} read_file($_[0]->dict_path)]}
 
 sub _build_count {
     $_[0]->letters;
