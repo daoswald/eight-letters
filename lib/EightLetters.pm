@@ -25,7 +25,7 @@ use constant {
     COUNT               => 1,
     ZEROBV              => do {my $bv; vec($bv, $_*32, 32) = 0 for 0 .. 7; $bv},
     ORD_A               => ord 'a',
-    CORE_MULTIPLIER     => 2,       # In testing, 2 is better on an i5 with 4 cores, and not worse on an i7 with 4 real, eight logical cores.
+    CORE_MULTIPLIER     => 1,       # In testing, 2 is better on an i5 with 4 cores, and not worse on an i7 with 4 real, eight logical cores.
 };
 
 has dict_path       => (is => 'ro', default => DICTIONARY);
