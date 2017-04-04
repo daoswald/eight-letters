@@ -105,21 +105,7 @@ sub _increment_counts {
     }
 
     my $pm = $_[0]->_pm;
-    $pm->run_on_finish(
-        sub {
-           my ($pid, $exit_code, $id, $exit_signal, $core_dump, $dsr) = @_;
-
-           if (!defined $dsr) {
-               $id //= '';
-                die "No datastructure reference received from $pid:$id.\n";
-            }
-
-            foreach my $b (@$dsr) {
-                my ($k, $v) = @$b;
-                $buckets->{$k} = $v;
-            }
-        }
-    );
+    $pm->run_on_finish(sub {$buckets->{$_->[0]} = $_->[1] for $_[5]->@*});
 
     for my $batch (@batches) {
         $pm->start and next;
@@ -143,60 +129,39 @@ sub _count_buckets {
     ($letters, $count);
 }
 
-# This subroutine is replaced by an Inline::C implementation.
-
-#sub _process_bucket {
-#  my($self, $b, $words) = @_;
-#  my $bs = $b->[SIGT];
-#  for my $w ($words->@*) {
-#    my $ws = $w->[SIGT];
-#    $b->[COUNT] += $w->[COUNT]
-#      if(  !($bs->[0] & $ws->[0])
-#        && !($bs->[1] & $ws->[1])
-#        && !($bs->[1] & $ws->[2])
-#        && !($bs->[3] & $ws->[3])
-#    );
-#  }
-#}
-
 1;
 
 __DATA__
 __C__
-
-/* Risk: We aren't checking SvROK anywhere. Know your data is clean,
- * because if it isn't, you'll core-dump.
- * Efficiency trumps safety here. This is called in a tight loop.
- */
 
 #define SIGT 0
 #define COUNT 1
 
 void _process_bucket( SV* self, SV* b, SV* words ) {
 
-  // Unpack the arguments.
-  AV* b_av     = (AV*) SvRV(b);
-  SV* b_count  = (SV*) *(av_fetch(b_av,COUNT,0));
-  AV* words_av = (AV*) SvRV(words);
-  AV* bs_av    = (AV*) SvRV(*( av_fetch(b_av,SIGT,0)));
+    // Unpack the arguments.
+    AV* b_av     = (AV*) SvRV(b);
+    SV* b_count  = (SV*) *(av_fetch(b_av,COUNT,0));
+    AV* words_av = (AV*) SvRV(words);
+    AV* bs_av    = (AV*) SvRV(*( av_fetch(b_av,SIGT,0)));
 
-  uint64_t bs[4];
-  bs[0] = ~SvIV(*(av_fetch(bs_av,0,0)));
-  bs[1] = ~SvIV(*(av_fetch(bs_av,1,0)));
-  bs[2] = ~SvIV(*(av_fetch(bs_av,2,0)));
-  bs[3] = ~SvIV(*(av_fetch(bs_av,3,0)));
+    uint64_t bs[4];
+    bs[0] = ~SvIV(*(av_fetch(bs_av,0,0)));
+    bs[1] = ~SvIV(*(av_fetch(bs_av,1,0)));
+    bs[2] = ~SvIV(*(av_fetch(bs_av,2,0)));
+    bs[3] = ~SvIV(*(av_fetch(bs_av,3,0)));
 
-  size_t ix=0;
-  size_t top = av_top_index(words_av);
-  for( ; ix <= top; ++ix ) {
+    size_t ix=0;
+    size_t top = av_top_index(words_av);
+    for( ; ix <= top; ++ix ) {
 
         AV* word_av = (AV*) SvRV(*(av_fetch(words_av,ix,0 )));
         AV* ws_av   = (AV*) SvRV(*(av_fetch(word_av,SIGT,0)));
 
-        if(  !(SvIV(*(av_fetch(ws_av,0,0))) & bs[0])
-        && !(SvIV(*(av_fetch(ws_av,1,0))) & bs[1])
-        && !(SvIV(*(av_fetch(ws_av,2,0))) & bs[2])
-        && !(SvIV(*(av_fetch(ws_av,3,0))) & bs[3])
+        if(    !(SvIV(*(av_fetch(ws_av,0,0))) & bs[0])
+            && !(SvIV(*(av_fetch(ws_av,1,0))) & bs[1])
+            && !(SvIV(*(av_fetch(ws_av,2,0))) & bs[2])
+            && !(SvIV(*(av_fetch(ws_av,3,0))) & bs[3])
         ) {
             sv_setiv(b_count, SvIV(b_count) + SvIV(*(av_fetch(word_av,COUNT,0))));
         }
