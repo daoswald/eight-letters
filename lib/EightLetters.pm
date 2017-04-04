@@ -23,7 +23,7 @@ use constant {
     DICTIONARY          => "$FindBin::Bin/../lib/dict/2of12inf.txt",
     SIGT                => 0,
     COUNT               => 1,
-    ZEROBV              => do {my $bv; vec($bv, $_*32, 32) = 0 for 0 .. 7; $bv},
+    ZEROBV              => "\0" x (32*8), #do {my $bv; vec($bv, $_*32, 32) = 0 for 0 .. 7; $bv},
     ORD_A               => ord 'a',
     CORE_MULTIPLIER     => 3,       # In testing, 2 is better on an i5 with 4 cores,
                                     # 3 is better on i7 with 4 cores, 8 logical.
@@ -49,7 +49,7 @@ sub _build_count {
 
 sub _build_signature {
     my($bv, @hist) = (ZEROBV, (0)x26);
-    $hist[ord() - ORD_A]++ for split //, $_[1];
+    $hist[ord() - ORD_A]++ for unpack '(A)*', $_[1];
     for (0 .. $#hist) {
         vec($bv, $hist[$_]*26+$_, 1) = 1 while $hist[$_]--;
     }
@@ -57,20 +57,16 @@ sub _build_signature {
 }
 
 sub _build__num_processes {(Sys::Info->new->device('CPU')->count) * CORE_MULTIPLIER}
-
 sub _build__pm {Parallel::ForkManager->new(shift()->_num_processes)}
 
 sub _organize_words {
     my($b, $w) = ($_[0]->buckets, $_[0]->words);
     for ($_[0]->dict->@*) {
-        my $letters = join '', sort split //;
+        my $letters = join '', sort unpack '(A)*';
         my $ref = (8 == length) ? $b : $w;
         $ref->{$letters} = [$_[0]->_build_signature($_), 0]
             unless exists $ref->{$letters};
         $ref->{$letters}[COUNT]++;
-    }
-    for my $bucket (values %$b) {
-        $_ = ~$_ for $bucket->[SIGT]->@*;
     }
 }
 
@@ -185,10 +181,10 @@ void _process_bucket( SV* self, SV* b, SV* words ) {
   AV* bs_av    = (AV*) SvRV(*( av_fetch(b_av,SIGT,0)));
 
   uint64_t bs[4];
-  bs[0] = SvIV(*(av_fetch(bs_av,0,0)));
-  bs[1] = SvIV(*(av_fetch(bs_av,1,0)));
-  bs[2] = SvIV(*(av_fetch(bs_av,2,0)));
-  bs[3] = SvIV(*(av_fetch(bs_av,3,0)));
+  bs[0] = ~SvIV(*(av_fetch(bs_av,0,0)));
+  bs[1] = ~SvIV(*(av_fetch(bs_av,1,0)));
+  bs[2] = ~SvIV(*(av_fetch(bs_av,2,0)));
+  bs[3] = ~SvIV(*(av_fetch(bs_av,3,0)));
 
   size_t ix=0;
   size_t top = av_top_index(words_av);
