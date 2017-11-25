@@ -2,7 +2,7 @@
 
 my $t;
 BEGIN{
-  use Time::HiRes;
+  require Time::HiRes;
   $t = [Time::HiRes::gettimeofday()];
 }
 
@@ -10,8 +10,11 @@ use FindBin;
 use lib "$FindBin::Bin/../lib";
 use EightLetters;
 
-use constant TEST_DICT => "$FindBin::Bin/../lib/dict/test_dict.txt";
+use constant DICT_PATH => "$FindBin::Bin/../lib/dict/2of12inf.txt";
 
-print $_->letters, " spells ", $_->count, " words.\n" for EightLetters->new;
+print "Calculating set of eight letters that spell the most words.\n";
+
+print $_->letters, " spells ", $_->count, " words.\n"
+    for EightLetters->new({dict_path => DICT_PATH});
 
 printf "Duration: %.03f seconds.\n", Time::HiRes::tv_interval($t);
