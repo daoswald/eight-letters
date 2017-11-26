@@ -17,7 +17,7 @@ use feature 'postderef';
 
 our $VERSION = '2.0';
 
-use constant CORE_MULTIPLIER => 3;  # In testing, 2 is better on an i5 with 4 cores,
+use constant CORE_MULTIPLIER => 7;  # In testing, 2 is better on an i5 with 4 cores,
                                     # 3 seems better on i7 with 4 cores, 8 logical.
 has dict_path       => (is => 'ro',);
 has count           => (is => 'lazy');
