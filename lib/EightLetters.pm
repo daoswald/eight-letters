@@ -78,7 +78,8 @@ sub _increment_counts {
 
     for my $batch (@batches) {
         $pm->start and next;
-        $_[0]->_process_bucket($_->[1], $words) for @$batch;
+        $_[0]->_process_batch($batch, $words);
+#        $_[0]->_process_bucket($_->[1], $words) for @$batch; # Replaced with the _process_batch XS call.
         $pm->finish(0, $batch);
     }
     $pm->wait_all_children;
@@ -101,23 +102,22 @@ __C__
 
 #define SIGT 0
 #define COUNT 1
+#define BUCKET 1
 
 void _process_bucket( SV* self, SV* b, SV* words ) {
-
     AV* b_av     = (AV*) SvRV(b);
     AV* words_av = (AV*) SvRV(words);
     AV* bs_av    = (AV*) SvRV(*( av_fetch(b_av,SIGT,0)));
 
     uint64_t bs[4];
-    bs[0] = ~SvIV(*(av_fetch(bs_av,0,0)));
-    bs[1] = ~SvIV(*(av_fetch(bs_av,1,0)));
-    bs[2] = ~SvIV(*(av_fetch(bs_av,2,0)));
-    bs[3] = ~SvIV(*(av_fetch(bs_av,3,0)));
+    bs[0]        = ~SvIV(*(av_fetch(bs_av,0,0)));
+    bs[1]        = ~SvIV(*(av_fetch(bs_av,1,0)));
+    bs[2]        = ~SvIV(*(av_fetch(bs_av,2,0)));
+    bs[3]        = ~SvIV(*(av_fetch(bs_av,3,0)));
 
-    size_t ix  = 0;
-    size_t top = av_top_index(words_av);
-    for( ; ix <= top; ++ix ) {
+    size_t top   = av_top_index(words_av);
 
+    for(size_t ix = 0; ix <= top; ++ix ) {
         AV* word_av = (AV*) SvRV(*(av_fetch(words_av,ix,0 )));
         AV* ws_av   = (AV*) SvRV(*(av_fetch(word_av,SIGT,0)));
 
@@ -131,3 +131,14 @@ void _process_bucket( SV* self, SV* b, SV* words ) {
         }
     }
 }
+
+void _process_batch(SV* self, SV* batch, SV* words) {
+    AV*    batch_av  = (AV*) SvRV(batch);
+    size_t batch_top = av_top_index(batch_av);
+
+    for (size_t ix = 0; ix <= batch_top; ++ix) {
+        SV* bucket = *(av_fetch((AV*) SvRV(*(av_fetch(batch_av, ix, 0))),BUCKET,0));
+        _process_bucket(self,bucket,words);
+    }
+}
+
