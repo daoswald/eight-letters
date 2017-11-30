@@ -78,8 +78,7 @@ sub _increment_counts {
 
     for my $batch (@batches) {
         $pm->start and next;
-        $_[0]->_process_batch($batch, $words);
-#        $_[0]->_process_bucket($_->[1], $words) for @$batch; # Replaced with the _process_batch XS call.
+        $_[0]->_process_batch($batch, $words);      # $_[0]->_process_bucket($_->[1], $words) for @$batch; # Replaced with the _process_batch XS call.
         $pm->finish(0, $batch);
     }
     $pm->wait_all_children;
