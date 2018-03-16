@@ -17,7 +17,7 @@ use feature 'postderef';
 
 our $VERSION = '2.0';
 
-use constant CORE_MULTIPLIER => 7;  # In testing, 2 is better on an i5 with 4 cores,
+use constant CORE_MULTIPLIER => 3;  # In testing, 2 is better on an i5 with 4 cores,
                                     # 3 seems better on i7 with 4 cores, 8 logical.
 has dict_path       => (is => 'ro',);
 has count           => (is => 'lazy');
@@ -115,8 +115,9 @@ void _process_bucket( SV* self, SV* b, SV* words ) {
     bs[3]        = ~SvIV(*(av_fetch(bs_av,3,0)));
 
     size_t top   = av_top_index(words_av);
+    size_t ix    = 0;
 
-    for(size_t ix = 0; ix <= top; ++ix ) {
+    for(ix = 0; ix <= top; ++ix ) {
         AV* word_av = (AV*) SvRV(*(av_fetch(words_av,ix,0 )));
         AV* ws_av   = (AV*) SvRV(*(av_fetch(word_av,SIGT,0)));
 
@@ -135,7 +136,8 @@ void _process_batch(SV* self, SV* batch, SV* words) {
     AV*    batch_av  = (AV*) SvRV(batch);
     size_t batch_top = av_top_index(batch_av);
 
-    for (size_t ix = 0; ix <= batch_top; ++ix) {
+    size_t ix = 0;
+    for (ix = 0; ix <= batch_top; ++ix) {
         SV* bucket = *(av_fetch((AV*) SvRV(*(av_fetch(batch_av, ix, 0))),BUCKET,0));
         _process_bucket(self,bucket,words);
     }
