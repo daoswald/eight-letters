@@ -1,8 +1,8 @@
-package EightLetters;
+package EightLetters::XS;
 
 =head1 NAME
 
-EightLetters - Perl module to calculate which eight letter word spells the most words in a dictionary.
+EightLetters::XS - Perl module to calculate which eight letter word spells the most words in a dictionary.
 
 =cut
 
