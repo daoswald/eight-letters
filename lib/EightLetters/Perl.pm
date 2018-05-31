@@ -18,5 +18,18 @@ sub _build__words {
     return \@words;
 }
 
+sub _make_bucket {
+    my ($self, $word) = @_;
+    my %bucket;
+    foreach my $letter (split //, $word) {
+        $bucket{$letter}++;
+    }
+
+sub _make_bucket_key {
+    my ($self, $word) = @_;
+    my $key = join '', sort {$a cmp $b} split //, $word;
+    return $key;
+}
+
 
 1;
