@@ -47,7 +47,6 @@ sub _bucket_add {
 sub _bucket_increment {
     my ($self, $key) = @_;
     $self->_buckets->{$key}->{'count'}++;
-    warn "$key: ", $self->_buckets->{$key}->{'count'}, "\n" if $key eq 'aeinprst';
     return $self->_buckets->{$key}->{'count'};
 }
 
