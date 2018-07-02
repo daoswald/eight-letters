@@ -11,7 +11,6 @@ use Moo;
 use Inline C => 'DATA';
 use Inline C => Config => ccflagsex => '-Ofast';
 use Parallel::ForkManager;
-use Sys::Info;
 no warnings 'experimental::postderef';
 use feature 'postderef';
 
@@ -65,8 +64,20 @@ sub _build_letters {
 }
 
 sub _increment_counts {
+
+    my $ncpus =
+        eval {
+            require Sys::Info;
+            Sys::Info->new->device('CPU')->count;
+        }
+        || eval {
+            require Sys::Statistics::Linux;
+            Sys::Statistics::Linux->new(sysinfo => 1)->get->{sysinfo}->{countcpus};
+        }
+        || 2;
+
     my ($words, $n, $m, $buckets, @batches)
-        = ([values $_[0]->words->%*], 0, (Sys::Info->new->device('CPU')->count) * CORE_MULTIPLIER, $_[0]->buckets, ());
+        = ([values $_[0]->words->%*], 0, $ncpus * CORE_MULTIPLIER, $_[0]->buckets, ());
 
     while (my ($key, $v) = each %$buckets) {
         push @{$batches[$n++ % $m]}, [$key, $v];
