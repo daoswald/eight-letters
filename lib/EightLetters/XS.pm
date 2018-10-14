@@ -8,41 +8,43 @@ EightLetters::XS - Perl module to calculate which eight letter word spells the m
 
 use integer;
 use Moo;
+
 use Inline C => 'DATA';
 use Inline C => Config => ccflagsex => '-Ofast';
+
 use Parallel::ForkManager;
 use Sys::Info;
-no warnings 'experimental::postderef';
-use feature 'postderef';
+
+no warnings qw(experimental::postderef experimental::signatures);
+use feature qw(postderef signatures);
 
 our $VERSION = '2.0';
 
 use constant CORE_MULTIPLIER => 3;  # In testing, 2 is better on an i5 with 4 cores,
                                     # 3 seems better on i7 with 4 cores, 8 logical.
-has dict_path       => (is => 'ro',);
-has count           => (is => 'lazy');
-has letters         => (is => 'lazy');
-has buckets         => (is => 'rw', default => sub {{}});
-has words           => (is => 'rw', default => sub {{}});
-has _count_internal => (is => 'rw');
 
-sub _build_count {
-    $_[0]->letters;
-    $_[0]->_count_internal;
+has dict_path       => (is => 'ro');
+has _count_internal => (is => 'rw');
+has [qw(count letters)] => (is => 'lazy');
+has [qw(buckets words)] => (is => 'rw', default => sub {{}});
+
+sub _build_count ($self) {
+    $self->letters;
+    $self->_count_internal;
 }
 
-sub _signature {
+sub _signature ($word) {
         my($bv, @hist) = ("\0"x256, (0)x26); # Zero bit-vector, histograms.
-        $hist[ord() - 97]++ for unpack '(A)*', $_[0];  # ord('a') == 97.
+        $hist[ord() - 97]++ for unpack '(A)*', $word;  # ord('a') == 97.
         for (0 .. $#hist) {
             vec($bv, $hist[$_]*26+$_, 1) = 1 while $hist[$_]--;
         }
         [unpack 'Q4', $bv];
 }
 
-sub _organize_words {
-    my($b, $w) = ($_[0]->buckets, $_[0]->words);
-    for (map {(m/^([a-z]{1,8})\b/ && $1)||()} do {open my $fh, '<', $_[0]->dict_path; <$fh>}) {
+sub _organize_words ($self) {
+    my($b, $w) = ($self->buckets, $self->words);
+    for (map {(m/^([a-z]{1,8})\b/ && $1)||()} do {open my $fh, '<', $self->dict_path; <$fh>}) {
         my ($letters, $ref) = (
             join('', sort unpack '(A)*'),
             (8 == length) ? $b : $w,
@@ -53,8 +55,7 @@ sub _organize_words {
     }
 }
 
-sub _build_letters {
-    my $self = shift;
+sub _build_letters ($self) {
 
     $self->_organize_words;
     $self->_increment_counts;
@@ -64,9 +65,9 @@ sub _build_letters {
     $bucket_name;
 }
 
-sub _increment_counts {
+sub _increment_counts ($self) {
     my ($words, $n, $m, $buckets, @batches)
-        = ([values $_[0]->words->%*], 0, (Sys::Info->new->device('CPU')->count) * CORE_MULTIPLIER, $_[0]->buckets, ());
+        = ([values $self->words->%*], 0, (Sys::Info->new->device('CPU')->count) * CORE_MULTIPLIER, $self->buckets, ());
 
     while (my ($key, $v) = each %$buckets) {
         push @{$batches[$n++ % $m]}, [$key, $v];
@@ -78,14 +79,14 @@ sub _increment_counts {
 
     for my $batch (@batches) {
         $pm->start and next;
-        $_[0]->_process_batch($batch, $words);      # $_[0]->_process_bucket($_->[1], $words) for @$batch; # Replaced with the _process_batch XS call.
+        $self->_process_batch($batch, $words);      # $_[0]->_process_bucket($_->[1], $words) for @$batch; # Replaced with the _process_batch XS call.
         $pm->finish(0, $batch);
     }
     $pm->wait_all_children;
 }
 
-sub _count_buckets {
-    my($count, $buckets, $letters) = (0, $_[0]->buckets, '');
+sub _count_buckets ($self) {
+    my($count, $buckets, $letters) = (0, $self->buckets, '');
 
     while(my($bucket_key, $bucket) = each %$buckets) {
         ($letters, $count) = ($bucket_key, $bucket->[1]) if $bucket->[1] > $count;
@@ -103,16 +104,17 @@ __C__
 #define COUNT 1
 #define BUCKET 1
 
-void _process_bucket( SV* self, SV* b, SV* words ) {
+void _process_bucket(SV* self, SV* b, SV* words) {
     AV* b_av     = (AV*) SvRV(b);
     AV* words_av = (AV*) SvRV(words);
-    AV* bs_av    = (AV*) SvRV(*( av_fetch(b_av,SIGT,0)));
+    AV* bs_av    = (AV*) SvRV(*(av_fetch(b_av,SIGT,0)));
 
-    uint64_t bs[4];
-    bs[0]        = ~SvIV(*(av_fetch(bs_av,0,0)));
-    bs[1]        = ~SvIV(*(av_fetch(bs_av,1,0)));
-    bs[2]        = ~SvIV(*(av_fetch(bs_av,2,0)));
-    bs[3]        = ~SvIV(*(av_fetch(bs_av,3,0)));
+    uint64_t bs[4] = {
+        ~SvIV(*(av_fetch(bs_av,0,0))),
+        ~SvIV(*(av_fetch(bs_av,1,0))),
+        ~SvIV(*(av_fetch(bs_av,2,0))),
+        ~SvIV(*(av_fetch(bs_av,3,0)))
+    };
 
     size_t top   = av_top_index(words_av);
     size_t ix    = 0;
