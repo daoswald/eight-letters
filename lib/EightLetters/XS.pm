@@ -20,10 +20,8 @@ use feature qw(postderef signatures);
 
 our $VERSION = '2.0';
 
-use constant CORE_MULTIPLIER => 3;  # In testing, 2 is better on an i5 with 4 cores,
-                                    # 3 seems better on i7 with 4 cores, 8 logical.
-
 has dict_path       => (is => 'ro');
+has core_multiplier => (is => 'ro', default => 6);
 has _count_internal => (is => 'rw');
 has [qw(count letters)] => (is => 'lazy');
 has [qw(buckets words)] => (is => 'rw', default => sub {{}});
@@ -67,7 +65,7 @@ sub _build_letters ($self) {
 
 sub _increment_counts ($self) {
     my ($words, $n, $m, $buckets, @batches)
-        = ([values $self->words->%*], 0, (Sys::Info->new->device('CPU')->count) * CORE_MULTIPLIER, $self->buckets, ());
+        = ([values $self->words->%*], 0, (Sys::Info->new->device('CPU')->count) * $self->core_multiplier, $self->buckets, ());
 
     while (my ($key, $v) = each %$buckets) {
         push @{$batches[$n++ % $m]}, [$key, $v];

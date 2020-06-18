@@ -10,6 +10,8 @@ use FindBin;
 use lib "$FindBin::Bin/../lib";
 use EightLetters::XS;
 
+use constant CORES => 9;
+
 my $variant = shift || 'XS';
 die "Bad variant: $variant\n" unless $variant =~ m/^[A-Z]\w*$/;
 
@@ -21,6 +23,9 @@ use constant DICT_PATH => "$FindBin::Bin/../lib/dict/2of12inf.txt";
 print "Calculating set of eight letters that spell the most words.\n";
 
 print $_->letters, " spells ", $_->count, " words.\n"
-    for $module->new({dict_path => DICT_PATH});
+    for $module->new({
+        dict_path       => DICT_PATH,
+        core_multiplier => CORES,
+    });
 
 printf "Duration: %.03f seconds.\n", Time::HiRes::tv_interval($t);
