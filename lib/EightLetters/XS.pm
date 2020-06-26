@@ -71,7 +71,8 @@ sub _increment_counts ($self) {
         push @{$batches[$n++ % $m]}, [$key, $v];
     }
 
-    my $pm = Parallel::ForkManager->new($m);
+    my $pm = Parallel::ForkManager->new(max_proc => $m);
+
     $pm->set_waitpid_blocking_sleep(0);
     $pm->run_on_finish(sub {$buckets->{$_->[0]} = $_->[1] for $_[5]->@*});
 
