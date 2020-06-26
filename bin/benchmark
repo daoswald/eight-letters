@@ -8,7 +8,7 @@ our $LIB_PATH;
 BEGIN {$LIB_PATH = catdir($FindBin::Bin, '..', 'lib')}
 use lib $LIB_PATH;
 
-use constant CORES => 9;
+use constant CORE_MULT => 8;
 use constant DICT_PATH => catfile($FindBin::Bin, '..', 'lib', 'dict', '2of12inf.txt');
 my $iter = 10;
 
@@ -28,7 +28,10 @@ foreach my $module (@modules) {
     print "Loading $module.\n";
     eval "require $module; 1;" or die "Cannot continue without $module: $!\n";
     $code{$module} = sub {
-        my $o = $module->new(dict_path => DICT_PATH, cores => CORES);
+        my $o = $module->new(
+            dict_path => DICT_PATH,
+            core_multiplier => CORE_MULT
+        );
         my ($l, $c) = ($o->letters, $o->count);
         print "$module: $l, $c\n";
     };

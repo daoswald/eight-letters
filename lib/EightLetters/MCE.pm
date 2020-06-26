@@ -64,8 +64,6 @@ EOC
 use Inline C => Config => ccflagsex => '-Ofast';
 
 use MCE;
-#use Parallel::ForkManager;
-use Sys::Info;
 
 no warnings qw(experimental::postderef experimental::signatures);
 use feature qw(postderef signatures);
@@ -117,14 +115,14 @@ sub _build_letters ($self) {
 
 sub _increment_counts ($self) {
     my ($words, $n, $m, $buckets, @batches)
-        = ([values $self->words->%*], 0, (Sys::Info->new->device('CPU')->count) * $self->core_multiplier, $self->buckets, ());
+        = ([values $self->words->%*], 0, MCE::Util::get_ncpu() * $self->core_multiplier, $self->buckets, ());
 
     while (my ($key, $v) = each %$buckets) {
         push @{$batches[$n++ % $m]}, [$key, $v];
     }
 
     MCE->new(
-        max_workers => $m, # or MCE::Util::get_ncpu(),
+        max_workers => $m,
         chunk_size  => 1,
         posix_exit  => 1,
         input_data  => \@batches,
