@@ -16,6 +16,7 @@ die "Bad variant: $variant\n" unless $variant =~ m/^[A-Z]\w*$/;
 
 my $module  = "EightLetters::$variant";
 eval "require $module; 1;" or die "Unable to load $module.\n";
+print "Using $module variant.\n";
 
 use constant DICT_PATH => "$FindBin::Bin/../lib/dict/2of12inf.txt";
 
