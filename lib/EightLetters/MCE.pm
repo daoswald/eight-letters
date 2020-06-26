@@ -1,8 +1,8 @@
-package EightLetters::XS;
+package EightLetters::MCE;
 
 =head1 NAME
 
-EightLetters::XS - Perl module to calculate which eight letter word spells the most words in a dictionary.
+EightLetters::MCE - Perl module to calculate which eight letter word spells the most words in a dictionary.
 
 =cut
 
@@ -58,7 +58,8 @@ void _process_batch(SV* self, SV* batch, SV* words) {
 EOC
 use Inline C => Config => ccflagsex => '-Ofast';
 
-use Parallel::ForkManager;
+use MCE;
+#use Parallel::ForkManager;
 use Sys::Info;
 
 no warnings qw(experimental::postderef experimental::signatures);
@@ -117,17 +118,21 @@ sub _increment_counts ($self) {
         push @{$batches[$n++ % $m]}, [$key, $v];
     }
 
-    my $pm = Parallel::ForkManager->new(max_proc => $m);
-
-    $pm->set_waitpid_blocking_sleep(0);
-    $pm->run_on_finish(sub {$buckets->{$_->[0]} = $_->[1] for $_[5]->@*});
-
-    for my $batch (@batches) {
-        $pm->start and next;
-        $self->_process_batch($batch, $words);
-        $pm->finish(0, $batch);
-    }
-    $pm->wait_all_children;
+    MCE->new(
+        max_workers => $m, # or MCE::Util::get_ncpu(),
+        chunk_size  => 1,
+        posix_exit  => 1,
+        input_data  => \@batches,
+        gather      => sub {
+            $buckets->{$_->[0]} = $_->[1] for $_[0]->@*;
+        },
+        user_func   => sub {
+            my ($mce, $chunk_ref, $chunk_id) = @_;
+            my $batch = $chunk_ref->[0];
+            $self->_process_batch($batch, $words);
+            MCE->gather($batch);
+        },
+    )->run;
 }
 
 sub _count_buckets ($self) {
