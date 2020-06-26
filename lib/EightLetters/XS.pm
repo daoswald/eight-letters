@@ -9,7 +9,53 @@ EightLetters::XS - Perl module to calculate which eight letter word spells the m
 use integer;
 use Moo;
 
-use Inline C => 'DATA';
+use Inline C => <<'EOC';
+#define SIGT 0
+#define COUNT 1
+#define BUCKET 1
+
+void _process_bucket(SV* self, SV* b, SV* words) {
+    AV* b_av     = (AV*) SvRV(b);
+    AV* words_av = (AV*) SvRV(words);
+    AV* bs_av    = (AV*) SvRV(*(av_fetch(b_av,SIGT,0)));
+
+    uint64_t bs[4] = {
+        ~SvIV(*(av_fetch(bs_av,0,0))),
+        ~SvIV(*(av_fetch(bs_av,1,0))),
+        ~SvIV(*(av_fetch(bs_av,2,0))),
+        ~SvIV(*(av_fetch(bs_av,3,0)))
+    };
+
+    size_t top   = av_top_index(words_av);
+    size_t ix    = 0;
+
+    for(ix = 0; ix <= top; ++ix ) {
+        AV* word_av = (AV*) SvRV(*(av_fetch(words_av,ix,0 )));
+        AV* ws_av   = (AV*) SvRV(*(av_fetch(word_av,SIGT,0)));
+
+        if(    !(SvIV(*(av_fetch(ws_av,0,0))) & bs[0])
+            && !(SvIV(*(av_fetch(ws_av,1,0))) & bs[1])
+            && !(SvIV(*(av_fetch(ws_av,2,0))) & bs[2])
+            && !(SvIV(*(av_fetch(ws_av,3,0))) & bs[3])
+        ) {
+            SV* b_count = (SV*) *(av_fetch(b_av,COUNT,0));
+            sv_setiv(b_count, SvIV(b_count) + SvIV(*(av_fetch(word_av,COUNT,0))));
+        }
+    }
+}
+
+void _process_batch(SV* self, SV* batch, SV* words) {
+    AV*    batch_av  = (AV*) SvRV(batch);
+    size_t batch_top = av_top_index(batch_av);
+
+    size_t ix = 0;
+    for (ix = 0; ix <= batch_top; ++ix) {
+        SV* bucket = *(av_fetch((AV*) SvRV(*(av_fetch(batch_av, ix, 0))),BUCKET,0));
+        _process_bucket(self,bucket,words);
+    }
+}
+
+EOC
 use Inline C => Config => ccflagsex => '-Ofast';
 
 use Parallel::ForkManager;
@@ -95,52 +141,3 @@ sub _count_buckets ($self) {
 }
 
 1;
-
-__DATA__
-__C__
-
-#define SIGT 0
-#define COUNT 1
-#define BUCKET 1
-
-void _process_bucket(SV* self, SV* b, SV* words) {
-    AV* b_av     = (AV*) SvRV(b);
-    AV* words_av = (AV*) SvRV(words);
-    AV* bs_av    = (AV*) SvRV(*(av_fetch(b_av,SIGT,0)));
-
-    uint64_t bs[4] = {
-        ~SvIV(*(av_fetch(bs_av,0,0))),
-        ~SvIV(*(av_fetch(bs_av,1,0))),
-        ~SvIV(*(av_fetch(bs_av,2,0))),
-        ~SvIV(*(av_fetch(bs_av,3,0)))
-    };
-
-    size_t top   = av_top_index(words_av);
-    size_t ix    = 0;
-
-    for(ix = 0; ix <= top; ++ix ) {
-        AV* word_av = (AV*) SvRV(*(av_fetch(words_av,ix,0 )));
-        AV* ws_av   = (AV*) SvRV(*(av_fetch(word_av,SIGT,0)));
-
-        if(    !(SvIV(*(av_fetch(ws_av,0,0))) & bs[0])
-            && !(SvIV(*(av_fetch(ws_av,1,0))) & bs[1])
-            && !(SvIV(*(av_fetch(ws_av,2,0))) & bs[2])
-            && !(SvIV(*(av_fetch(ws_av,3,0))) & bs[3])
-        ) {
-            SV* b_count = (SV*) *(av_fetch(b_av,COUNT,0));
-            sv_setiv(b_count, SvIV(b_count) + SvIV(*(av_fetch(word_av,COUNT,0))));
-        }
-    }
-}
-
-void _process_batch(SV* self, SV* batch, SV* words) {
-    AV*    batch_av  = (AV*) SvRV(batch);
-    size_t batch_top = av_top_index(batch_av);
-
-    size_t ix = 0;
-    for (ix = 0; ix <= batch_top; ++ix) {
-        SV* bucket = *(av_fetch((AV*) SvRV(*(av_fetch(batch_av, ix, 0))),BUCKET,0));
-        _process_bucket(self,bucket,words);
-    }
-}
-
