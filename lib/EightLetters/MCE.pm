@@ -4,6 +4,11 @@ package EightLetters::MCE;
 
 EightLetters::MCE - Perl module to calculate which eight letter word spells the most words in a dictionary.
 
+=head1 CONTRIBUTORS
+
+The adaptation from Parallel::ForkManager to MCE was provided
+by Mario Roy.
+
 =cut
 
 use integer;

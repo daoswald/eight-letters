@@ -4,6 +4,11 @@ package EightLetters::MCEChild;
 
 EightLetters::MCEChild - Perl module to calculate which eight letter word spells the most words in a dictionary.
 
+=head1 CONTRIBUTORS
+
+The adaptation from Parallel::ForkManager to MCE::Child was provided
+by Mario Roy.
+
 =cut
 
 use integer;
