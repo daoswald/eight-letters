@@ -1,0 +1,40 @@
+#!/usr/bin/env perl
+
+use Benchmark qw(cmpthese);
+use FindBin;
+use File::Spec::Functions qw(catfile catdir);
+
+our $LIB_PATH;
+BEGIN {$LIB_PATH = catdir($FindBin::Bin, '..', 'lib')}
+use lib $LIB_PATH;
+
+use constant CORES => 9;
+use constant DICT_PATH => catfile($FindBin::Bin, '..', 'lib', 'dict', '2of12inf.txt');
+my $iter = 10;
+
+opendir(my $dh, catdir($LIB_PATH, 'EightLetters'));
+
+my @modules =
+    sort
+    map {
+        (my $mod_fname = $_) =~ s/\.pm$//;
+        join('::', 'EightLetters', $mod_fname);
+    }
+    grep {! m/^\.{1,2}$/ && !m/^(?:Perl|SQLite)/}
+    readdir($dh);
+
+my %code;
+foreach my $module (@modules) {
+    print "Loading $module.\n";
+    eval "require $module; 1;" or die "Cannot continue without $module: $!\n";
+    $code{$module} = sub {
+        my $o = $module->new(dict_path => DICT_PATH, cores => CORES);
+        my ($l, $c) = ($o->letters, $o->count);
+        print "$module: $l, $c\n";
+    };
+}
+
+print "Benchmarking modules: ", join(', ', @modules), "\n";
+print "$iter iterations. This takes minutes...\n";
+
+cmpthese($iter  => \%code);
