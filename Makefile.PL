@@ -12,13 +12,14 @@ my $PREREQ_PM = {
     'Inline'                => '0',
     'Inline::C'             => '0',
     'Parallel::ForkManager' => '0',
+    'Sys::Info'             => '0',
 };
 
 WriteMakefile(
   NAME             => 'EightLetters',
   AUTHOR           => q{David Oswald <davido[at]cpan[dot]org>},
-  VERSION_FROM     => 'lib/EightLetters.pm',
-  ABSTRACT_FROM    => 'lib/EightLetters.pm',
+  VERSION_FROM     => 'lib/EightLetters/Perl.pm',
+  ABSTRACT_FROM    => 'lib/EightLetters/Perl.pm',
   LICENSE          => 'artistic_2',
   MIN_PERL_VERSION => '5.010000',
   PL_FILES         => {},

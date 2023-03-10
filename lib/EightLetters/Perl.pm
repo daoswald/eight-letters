@@ -2,6 +2,8 @@ package EightLetters::Perl;
 
 use Moo;
 
+our $VERSION = '0.01';
+
 use constant TARGET_LENGTH => 8;
 
 has dict_path => (is => 'ro');
@@ -119,3 +121,10 @@ sub _word_fits_bucket {
 }
 
 1;
+
+__END__
+
+=pod
+
+=head1 NAME
+EightLetters
